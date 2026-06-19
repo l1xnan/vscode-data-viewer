@@ -1,0 +1,7 @@
+[
+  {"id": 1, "product": "Widget", "price": 19.99, "in_stock": true},
+  {"id": 2, "product": "Gadget", "price": 29.50, "in_stock": false},
+  {"id": 3, "product": "Tool", "price": 9.99, "in_stock": true},
+  {"id": 4, "product": "Device", "price": 149.00, "in_stock": true},
+  {"id": 5, "product": "Part", "price": 4.50, "in_stock": false}
+]

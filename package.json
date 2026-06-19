@@ -1,0 +1,139 @@
+{
+  "name": "vscode-data-viewer",
+  "displayName": "Data Viewer",
+  "description": "Browse and query parquet, csv, json, xlsx files with DuckDB SQL",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Data Science",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:dataViewer.explorer"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "data-viewer",
+          "title": "Data Viewer",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "data-viewer": [
+        {
+          "id": "dataViewer.explorer",
+          "name": "Data Files",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "dataViewer.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "dataViewer.openFile",
+        "title": "Open Data File"
+      },
+      {
+        "command": "dataViewer.runQuery",
+        "title": "Run SQL Query",
+        "icon": "$(play)"
+      },
+      {
+        "command": "dataViewer.runStatement",
+        "title": "Run SQL Statement",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "dataViewer.refresh",
+          "when": "view == dataViewer.explorer",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "dataViewer.runQuery",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorLangId == sql && resourceScheme == dataviewer-sql"
+      }
+    ],
+    "configuration": {
+      "title": "Data Viewer",
+      "properties": {
+        "dataViewer.pageSize": {
+          "type": "number",
+          "default": 500,
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "Default rows per page (LIMIT)"
+        },
+        "dataViewer.excludeGlobs": {
+          "type": "array",
+          "default": [
+            "**/.git/**",
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/.vscode/**"
+          ],
+          "description": "Glob patterns to exclude from file scan"
+        },
+        "dataViewer.supportedExtensions": {
+          "type": "array",
+          "default": [
+            ".parquet",
+            ".csv",
+            ".tsv",
+            ".json",
+            ".jsonl",
+            ".ndjson",
+            ".xlsx"
+          ],
+          "description": "File extensions shown in the data explorer"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build:extension": "vite build --config vite.config.extension.ts",
+    "build:webview": "vite build --config vite.config.webview.ts",
+    "build": "npm run build:webview && npm run build:extension",
+    "watch:extension": "vite build --config vite.config.extension.ts --watch",
+    "watch:webview": "vite build --config vite.config.webview.ts --watch",
+    "dev": "concurrently \"npm:watch:extension\" \"npm:watch:webview\"",
+    "test": "node scripts/integration-test.mjs",
+    "vscode:prepublish": "npm run build"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "^1.5.4-r.1",
+    "@tanstack/react-table": "^8.21.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.125.0",
+    "@types/vscode-webview": "^1.57.5",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
+  }
+}

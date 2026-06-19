@@ -1,0 +1,11 @@
+.vscode/**
+.vscode-test/**
+src/**
+webview/**
+node_modules/**
+**/*.ts
+**/*.map
+vite.config.*.ts
+tsconfig*.json
+.gitignore
+**/.DS_Store
