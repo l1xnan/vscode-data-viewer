@@ -1,3 +1,14 @@
+export type DataFileTreeNodeKind = 'folder' | 'file' | 'workbook';
+
+export interface DataFileTreeNode {
+  name: string;
+  path: string;
+  kind: DataFileTreeNodeKind;
+  extension?: string;
+  children?: DataFileTreeNode[];
+}
+
+/** @deprecated Use DataFileTreeNode for tree scan results */
 export interface ScannedDataFile {
   filePath: string;
   extension: string;
@@ -14,7 +25,7 @@ export type ExtensionMessage =
   | {
       type: 'files';
       payload: {
-        files: ScannedDataFile[];
+        tree: DataFileTreeNode[];
         sqlFiles: ScannedSqlFile[];
         workspaceOpen: boolean;
       };

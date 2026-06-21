@@ -66,6 +66,15 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  font-family: var(
+    --vscode-editor-font-family,
+    var(--vscode-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace)
+  );
+  font-size: var(--vscode-editor-font-size, 13px);
+}
+
+.sql-editor .cm-editor {
+  height: 100%;
 }
 
 .splitter {

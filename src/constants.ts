@@ -13,11 +13,25 @@ export const DEFAULT_SUPPORTED_EXTENSIONS = [
   '.xlsx',
 ];
 
+export const DEFAULT_EXCLUDE_FOLDERS = [
+  '.git',
+  'node_modules',
+  'dist',
+  '.vscode',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.dataviewer',
+];
+
 export const DEFAULT_EXCLUDE_GLOBS = [
   '**/.git/**',
   '**/node_modules/**',
   '**/dist/**',
   '**/.vscode/**',
+  '**/.venv/**',
+  '**/venv/**',
+  '**/__pycache__/**',
 ];
 
 export type DataFileFormat =

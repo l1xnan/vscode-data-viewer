@@ -77,6 +77,15 @@ body,
   background: var(--vscode-list-hoverBackground);
 }
 
+.file-item.folder {
+  font-weight: 500;
+  color: var(--vscode-foreground);
+}
+
+.file-item.folder:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
 .file-item.workbook {
   font-weight: 500;
 }

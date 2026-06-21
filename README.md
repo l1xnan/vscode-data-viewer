@@ -4,7 +4,7 @@
 
 ## 功能
 
-- **Data Files 侧边栏**：扫描当前工作区，支持搜索过滤
+- **Data Files 侧边栏**：按目录树展示工作区数据文件，支持搜索过滤
 - **SQL Files 子树**：持久化 SQL 片段存于 `.dataviewer/queries/*.sql`，用原生编辑器编辑
 - **多格式支持**：Parquet、CSV、TSV、JSON、JSONL、NDJSON、XLSX
 - **XLSX 多 Sheet**：展开工作簿，按 Sheet 打开
@@ -71,7 +71,8 @@ npm test
 | 设置 | 默认值 | 说明 |
 |------|--------|------|
 | `dataViewer.pageSize` | `500` | 表格每页行数（对应 SQL `LIMIT`） |
-| `dataViewer.excludeGlobs` | `**/.git/**` 等 | 扫描时排除的 glob |
+| `dataViewer.excludeFolders` | `.git`, `node_modules`, `.venv` 等 | 按文件夹名排除（任意路径层级） |
+| `dataViewer.excludeGlobs` | `**/.git/**` 等 | 高级 glob 排除规则 |
 | `dataViewer.supportedExtensions` | 见上表 | 侧边栏显示的扩展名 |
 
 ## 命令

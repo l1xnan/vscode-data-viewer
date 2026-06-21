@@ -143,11 +143,11 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
     if (!this.view) {
       return;
     }
-    const { files, workspaceOpen } = await scanDataFiles();
+    const { tree, workspaceOpen } = await scanDataFiles();
     const sqlFiles = await listSqlSnippets();
     await this.view.webview.postMessage({
       type: 'files',
-      payload: { files, sqlFiles, workspaceOpen },
+      payload: { tree, sqlFiles, workspaceOpen },
     });
   }
 
@@ -192,4 +192,4 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
   }
 }
 
-export type { ScannedDataFile };
+export type { DataFileTreeNode, ScannedDataFile };

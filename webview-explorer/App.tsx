@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { newSql, notifyReady, openFile, openSql, requestSheets } from './messaging';
-import { ExtensionMessage, ScannedDataFile, ScannedSqlFile } from './types';
+import { countTreeFiles, FileTree, filterTree } from './FileTree';
+import { newSql, notifyReady, openSql, requestSheets } from './messaging';
+import { DataFileTreeNode, ExtensionMessage, ScannedSqlFile } from './types';
 
 function matchesSearch(text: string, search: string): boolean {
   if (!search.trim()) {
@@ -10,7 +11,7 @@ function matchesSearch(text: string, search: string): boolean {
 }
 
 export function App() {
-  const [files, setFiles] = useState<ScannedDataFile[]>([]);
+  const [tree, setTree] = useState<DataFileTreeNode[]>([]);
   const [sqlFiles, setSqlFiles] = useState<ScannedSqlFile[]>([]);
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -23,10 +24,20 @@ export function App() {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
       const message = event.data;
       if (message?.type === 'files') {
-        setFiles(message.payload.files);
+        setTree(message.payload.tree);
         setSqlFiles(message.payload.sqlFiles);
         setWorkspaceOpen(message.payload.workspaceOpen);
         setLoaded(true);
+        const roots = message.payload.tree.filter((node) => node.kind === 'folder');
+        if (roots.length > 0) {
+          setExpanded((prev) => {
+            const next = { ...prev };
+            for (const root of roots) {
+              next[root.path] = true;
+            }
+            return next;
+          });
+        }
       }
       if (message?.type === 'sheets') {
         setSheetsByFile((prev) => ({
@@ -45,16 +56,12 @@ export function App() {
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  const filteredFiles = useMemo(
-    () =>
-      files.filter(
-        (file) =>
-          matchesSearch(file.fileName, search) ||
-          matchesSearch(file.filePath, search) ||
-          matchesSearch(file.extension, search),
-      ),
-    [files, search],
+  const fileCount = useMemo(() => countTreeFiles(tree), [tree]);
+  const visibleTree = useMemo(
+    () => (search.trim() ? filterTree(tree, search) : tree),
+    [tree, search],
   );
+  const visibleFileCount = useMemo(() => countTreeFiles(visibleTree), [visibleTree]);
 
   const filteredSqlFiles = useMemo(
     () =>
@@ -64,12 +71,16 @@ export function App() {
     [sqlFiles, search],
   );
 
-  const toggleWorkbook = (file: ScannedDataFile) => {
-    const isExpanded = expanded[file.filePath];
-    setExpanded((prev) => ({ ...prev, [file.filePath]: !isExpanded }));
-    if (!isExpanded && !sheetsByFile[file.filePath]) {
-      setLoadingSheets((prev) => ({ ...prev, [file.filePath]: true }));
-      requestSheets(file.filePath);
+  const toggleFolder = (folderPath: string) => {
+    setExpanded((prev) => ({ ...prev, [folderPath]: !prev[folderPath] }));
+  };
+
+  const toggleWorkbook = (node: DataFileTreeNode) => {
+    const isExpanded = expanded[node.path];
+    setExpanded((prev) => ({ ...prev, [node.path]: !isExpanded }));
+    if (!isExpanded && !sheetsByFile[node.path]) {
+      setLoadingSheets((prev) => ({ ...prev, [node.path]: true }));
+      requestSheets(node.path);
     }
   };
 
@@ -77,9 +88,12 @@ export function App() {
     ? 'Loading data files...'
     : !workspaceOpen
       ? 'Open a workspace folder containing data files (File → Open Folder).'
-      : files.length === 0
+      : fileCount === 0
         ? 'No data files found in the workspace.'
         : 'No files match your search.';
+
+  const showDataEmpty =
+    !loaded || !workspaceOpen || fileCount === 0 || (search.trim() && visibleFileCount === 0);
 
   return (
     <div className="explorer">
@@ -98,64 +112,18 @@ export function App() {
         <div className="section-header">
           <span>Data Files</span>
         </div>
-        {filteredFiles.length === 0 ? (
+        {showDataEmpty ? (
           <div className="empty-state">{emptyDataMessage}</div>
         ) : (
-          filteredFiles.map((file) => {
-            if (file.kind === 'workbook') {
-              const isExpanded = expanded[file.filePath];
-              const sheets = sheetsByFile[file.filePath] ?? [];
-              const loading = loadingSheets[file.filePath];
-
-              return (
-                <div key={file.filePath}>
-                  <button
-                    type="button"
-                    className="file-item workbook"
-                    onClick={() => toggleWorkbook(file)}
-                  >
-                    <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-                    <span>{file.fileName}</span>
-                    <span className="file-meta">xlsx</span>
-                  </button>
-                  {isExpanded ? (
-                    <div className="sheet-list">
-                      {loading ? (
-                        <div className="empty-state">Loading sheets...</div>
-                      ) : sheets.length === 0 ? (
-                        <div className="empty-state">No sheets found</div>
-                      ) : (
-                        sheets.map((sheetName) => (
-                          <button
-                            key={`${file.filePath}:${sheetName}`}
-                            type="button"
-                            className="sheet-item"
-                            onClick={() => openFile(file.filePath, file.extension, sheetName)}
-                          >
-                            <span>{sheetName}</span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            }
-
-            return (
-              <button
-                key={file.filePath}
-                type="button"
-                className="file-item"
-                onClick={() => openFile(file.filePath, file.extension)}
-                title={file.filePath}
-              >
-                <span className="expand-icon" />
-                <span>{file.fileName}</span>
-                <span className="file-meta">{file.extension.replace('.', '')}</span>
-              </button>
-            );
-          })
+          <FileTree
+            nodes={visibleTree}
+            expanded={expanded}
+            sheetsByFile={sheetsByFile}
+            loadingSheets={loadingSheets}
+            onToggleFolder={toggleFolder}
+            onToggleWorkbook={toggleWorkbook}
+            forceExpand={Boolean(search.trim())}
+          />
         )}
 
         <div className="section-header section-header-sql">

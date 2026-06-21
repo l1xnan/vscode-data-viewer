@@ -104,15 +104,32 @@
           "maximum": 10000,
           "description": "Default rows per page (LIMIT)"
         },
+        "dataViewer.excludeFolders": {
+          "type": "array",
+          "default": [
+            ".git",
+            "node_modules",
+            "dist",
+            ".vscode",
+            ".venv",
+            "venv",
+            "__pycache__",
+            ".dataviewer"
+          ],
+          "description": "Folder names excluded from the Data Files tree (matched at any path segment)"
+        },
         "dataViewer.excludeGlobs": {
           "type": "array",
           "default": [
             "**/.git/**",
             "**/node_modules/**",
             "**/dist/**",
-            "**/.vscode/**"
+            "**/.vscode/**",
+            "**/.venv/**",
+            "**/venv/**",
+            "**/__pycache__/**"
           ],
-          "description": "Glob patterns to exclude from file scan"
+          "description": "Glob patterns to exclude from file scan (advanced)"
         },
         "dataViewer.supportedExtensions": {
           "type": "array",
