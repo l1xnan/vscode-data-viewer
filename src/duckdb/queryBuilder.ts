@@ -44,5 +44,6 @@ export function buildCountQuery(userSql: string, filters?: Record<string, string
 }
 
 export function buildDescribeQuery(sourceSql: string): string {
-  return `DESCRIBE SELECT * FROM (${sourceSql}) AS _desc`;
+  // sourceSql is already a table function call, e.g. read_parquet('path')
+  return `DESCRIBE SELECT * FROM ${sourceSql}`;
 }

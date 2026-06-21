@@ -1,3 +1,5 @@
+import * as path from 'path';
+import * as vscode from 'vscode';
 import { isQueriesSqlFile } from '../utils/sqlPaths';
 import { DEFAULT_PAGE_SIZE, DataTarget } from '../constants';
 import { DuckDBService } from '../duckdb/duckdbService';

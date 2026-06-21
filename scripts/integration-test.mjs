@@ -75,6 +75,11 @@ async function main() {
   const countReader = await conn.runAndReadAll(`SELECT COUNT(*) AS cnt FROM (${baseSql}) AS _q`);
   console.log('total:', countReader.getRowObjectsJson()[0]?.cnt);
 
+  const describeReader = await conn.runAndReadAll(
+    `DESCRIBE SELECT * FROM read_csv_auto('${csvPath}')`,
+  );
+  console.log('describe cols:', describeReader.getRowObjectsJson().length);
+
   const xlsxEscaped = escapePath(xlsxPath);
   const sheetReader = await conn.runAndReadAll(
     `SELECT * FROM read_xlsx('${xlsxEscaped}', sheet = 'Sales') LIMIT 500 OFFSET 0`,
