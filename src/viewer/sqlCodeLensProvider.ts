@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SQL_SCHEME } from '../constants';
+import { isQueriesSqlFile } from '../utils/sqlPaths';
 import { splitSqlStatements } from '../utils/sqlStatements';
 
 export class SqlCodeLensProvider implements vscode.CodeLensProvider {
@@ -14,7 +14,7 @@ export class SqlCodeLensProvider implements vscode.CodeLensProvider {
     document: vscode.TextDocument,
     _token: vscode.CancellationToken,
   ): vscode.CodeLens[] {
-    if (document.uri.scheme !== SQL_SCHEME) {
+    if (!isQueriesSqlFile(document.uri)) {
       return [];
     }
 
@@ -24,7 +24,7 @@ export class SqlCodeLensProvider implements vscode.CodeLensProvider {
         new vscode.CodeLens(new vscode.Range(statement.startLine, 0, statement.startLine, 0), {
           title: '$(play) Run Statement',
           tooltip: 'Execute this SQL statement in Data Viewer',
-          command: 'dataViewer.runStatement',
+          command: 'dataViewer.runSqlFileStatement',
           arguments: [document.uri.toString(), statement.startOffset, statement.endOffset],
         }),
     );

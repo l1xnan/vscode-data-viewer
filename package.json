@@ -46,12 +46,21 @@
         "title": "Open Data File"
       },
       {
-        "command": "dataViewer.runQuery",
+        "command": "dataViewer.newSqlFile",
+        "title": "New SQL Query",
+        "icon": "$(add)"
+      },
+      {
+        "command": "dataViewer.openSqlFile",
+        "title": "Open SQL Query"
+      },
+      {
+        "command": "dataViewer.runSqlFileQuery",
         "title": "Run SQL Query",
         "icon": "$(play)"
       },
       {
-        "command": "dataViewer.runStatement",
+        "command": "dataViewer.runSqlFileStatement",
         "title": "Run SQL Statement",
         "icon": "$(play)"
       }
@@ -62,15 +71,27 @@
           "command": "dataViewer.refresh",
           "when": "view == dataViewer.explorer",
           "group": "navigation@1"
+        },
+        {
+          "command": "dataViewer.newSqlFile",
+          "when": "view == dataViewer.explorer",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "dataViewer.runSqlFileQuery",
+          "when": "editorLangId == sql && resourceDirname =~ /[\\\\/]\\.dataviewer[\\\\/]queries/",
+          "group": "navigation@1"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "dataViewer.runQuery",
+        "command": "dataViewer.runSqlFileQuery",
         "key": "ctrl+enter",
         "mac": "cmd+enter",
-        "when": "editorLangId == sql && resourceScheme == dataviewer-sql"
+        "when": "editorLangId == sql && resourceDirname =~ /[\\\\/]\\.dataviewer[\\\\/]queries/"
       }
     ],
     "configuration": {
@@ -120,8 +141,16 @@
     "vscode:prepublish": "npm run build"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.1",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.1",
     "@duckdb/node-api": "^1.5.4-r.1",
     "@tanstack/react-table": "^8.21.3",
+    "codemirror": "^6.0.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "xlsx": "^0.18.5"

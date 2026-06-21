@@ -1,19 +1,15 @@
 import * as vscode from 'vscode';
-import { SQL_SCHEME } from '../constants';
 import { DuckDBService } from '../duckdb/duckdbService';
-import { DataViewerManager } from './dataViewerManager';
+import { isQueriesSqlFile } from '../utils/sqlPaths';
 
 export class SqlCompletionProvider implements vscode.CompletionItemProvider {
-  constructor(
-    private readonly duckdb: DuckDBService,
-    private readonly viewerManager: DataViewerManager,
-  ) {}
+  constructor(private readonly duckdb: DuckDBService) {}
 
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): Promise<vscode.CompletionItem[]> {
-    if (document.uri.scheme !== SQL_SCHEME) {
+    if (!isQueriesSqlFile(document.uri)) {
       return [];
     }
 
@@ -43,35 +39,6 @@ export class SqlCompletionProvider implements vscode.CompletionItemProvider {
           item.insertText = new vscode.SnippetString(`${fn.name}(${params})`);
         }
         items.push(item);
-      }
-    }
-
-    const session = this.viewerManager.getSessionForSqlUri(document.uri);
-    if (session) {
-      try {
-        const sourceSql = this.duckdb.buildSourceSql(session.target);
-        const columns = await this.duckdb.describeTarget(session.target);
-
-        for (const column of columns) {
-          if (!prefix || column.name.toLowerCase().startsWith(prefixLower)) {
-            const item = new vscode.CompletionItem(column.name, vscode.CompletionItemKind.Field);
-            item.detail = column.type;
-            items.push(item);
-          }
-        }
-
-        const fromSnippet = `SELECT * FROM ${sourceSql}`;
-        if (!prefix || 'select'.startsWith(prefixLower) || sourceSql.toLowerCase().includes(prefixLower)) {
-          const item = new vscode.CompletionItem(
-            'Default file query',
-            vscode.CompletionItemKind.Snippet,
-          );
-          item.insertText = new vscode.SnippetString(fromSnippet);
-          item.detail = session.target.displayName;
-          items.push(item);
-        }
-      } catch {
-        // Source may not be readable yet
       }
     }
 

@@ -1,4 +1,4 @@
-import { WebviewMessage } from './types';
+import { QueryPayload, WebviewMessage } from './types';
 
 declare function acquireVsCodeApi(): {
   postMessage(message: WebviewMessage): void;
@@ -6,8 +6,8 @@ declare function acquireVsCodeApi(): {
 
 const vscode = acquireVsCodeApi();
 
-export function postTableQuery(payload: WebviewMessage & { type: 'tableQuery' }['payload']): void {
-  vscode.postMessage({ type: 'tableQuery', payload });
+export function postQuery(payload: QueryPayload): void {
+  vscode.postMessage({ type: 'query', payload });
 }
 
 export function notifyReady(): void {

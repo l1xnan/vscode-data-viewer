@@ -15,3 +15,11 @@ export function requestSheets(filePath: string): void {
 export function openFile(filePath: string, extension: string, sheetName?: string): void {
   postMessage({ type: 'open', payload: { filePath, extension, sheetName } });
 }
+
+export function openSql(filePath: string): void {
+  postMessage({ type: 'openSql', payload: { filePath } });
+}
+
+export function newSql(): void {
+  postMessage({ type: 'newSql' });
+}

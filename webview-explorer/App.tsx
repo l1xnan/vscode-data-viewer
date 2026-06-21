@@ -1,21 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { notifyReady, openFile, requestSheets } from './messaging';
-import { ExtensionMessage, ScannedDataFile } from './types';
+import { newSql, notifyReady, openFile, openSql, requestSheets } from './messaging';
+import { ExtensionMessage, ScannedDataFile, ScannedSqlFile } from './types';
 
-function matchesSearch(file: ScannedDataFile, search: string): boolean {
+function matchesSearch(text: string, search: string): boolean {
   if (!search.trim()) {
     return true;
   }
-  const query = search.trim().toLowerCase();
-  return (
-    file.fileName.toLowerCase().includes(query) ||
-    file.filePath.toLowerCase().includes(query) ||
-    file.extension.toLowerCase().includes(query)
-  );
+  return text.toLowerCase().includes(search.trim().toLowerCase());
 }
 
 export function App() {
   const [files, setFiles] = useState<ScannedDataFile[]>([]);
+  const [sqlFiles, setSqlFiles] = useState<ScannedSqlFile[]>([]);
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
@@ -28,6 +24,7 @@ export function App() {
       const message = event.data;
       if (message?.type === 'files') {
         setFiles(message.payload.files);
+        setSqlFiles(message.payload.sqlFiles);
         setWorkspaceOpen(message.payload.workspaceOpen);
         setLoaded(true);
       }
@@ -49,8 +46,22 @@ export function App() {
   }, []);
 
   const filteredFiles = useMemo(
-    () => files.filter((file) => matchesSearch(file, search)),
+    () =>
+      files.filter(
+        (file) =>
+          matchesSearch(file.fileName, search) ||
+          matchesSearch(file.filePath, search) ||
+          matchesSearch(file.extension, search),
+      ),
     [files, search],
+  );
+
+  const filteredSqlFiles = useMemo(
+    () =>
+      sqlFiles.filter(
+        (file) => matchesSearch(file.fileName, search) || matchesSearch(file.filePath, search),
+      ),
+    [sqlFiles, search],
   );
 
   const toggleWorkbook = (file: ScannedDataFile) => {
@@ -62,7 +73,7 @@ export function App() {
     }
   };
 
-  const emptyMessage = !loaded
+  const emptyDataMessage = !loaded
     ? 'Loading data files...'
     : !workspaceOpen
       ? 'Open a workspace folder containing data files (File → Open Folder).'
@@ -84,8 +95,11 @@ export function App() {
       </div>
 
       <div className="file-list">
+        <div className="section-header">
+          <span>Data Files</span>
+        </div>
         {filteredFiles.length === 0 ? (
-          <div className="empty-state">{emptyMessage}</div>
+          <div className="empty-state">{emptyDataMessage}</div>
         ) : (
           filteredFiles.map((file) => {
             if (file.kind === 'workbook') {
@@ -142,6 +156,32 @@ export function App() {
               </button>
             );
           })
+        )}
+
+        <div className="section-header section-header-sql">
+          <span>SQL Files</span>
+          <button type="button" className="new-sql-button" onClick={() => newSql()} title="New Query">
+            +
+          </button>
+        </div>
+        {filteredSqlFiles.length === 0 ? (
+          <div className="empty-state">
+            {workspaceOpen ? 'No SQL snippets yet. Click + to create one.' : 'Open a workspace folder.'}
+          </div>
+        ) : (
+          filteredSqlFiles.map((file) => (
+            <button
+              key={file.filePath}
+              type="button"
+              className="file-item sql-file"
+              onClick={() => openSql(file.filePath)}
+              title={file.filePath}
+            >
+              <span className="expand-icon" />
+              <span>{file.fileName}</span>
+              <span className="file-meta">sql</span>
+            </button>
+          ))
         )}
       </div>
     </div>

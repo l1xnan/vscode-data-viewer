@@ -4,6 +4,7 @@ import { DataTarget, formatFromExtension } from '../constants';
 import { listXlsxSheets } from '../utils/xlsxSheets';
 import { getWebviewHtml } from '../viewer/webviewHtml';
 import { scanDataFiles, ScannedDataFile } from './dataFileScanner';
+import { createSqlSnippet, listSqlSnippets, openSqlSnippet } from '../sql/sqlSnippetStore';
 
 interface ExplorerOpenMessage {
   type: 'open';
@@ -19,7 +20,21 @@ interface ExplorerReadyMessage {
   type: 'ready';
 }
 
-type ExplorerWebviewMessage = ExplorerOpenMessage | ExplorerLoadSheetsMessage | ExplorerReadyMessage;
+interface ExplorerOpenSqlMessage {
+  type: 'openSql';
+  payload: { filePath: string };
+}
+
+interface ExplorerNewSqlMessage {
+  type: 'newSql';
+}
+
+type ExplorerWebviewMessage =
+  | ExplorerOpenMessage
+  | ExplorerLoadSheetsMessage
+  | ExplorerReadyMessage
+  | ExplorerOpenSqlMessage
+  | ExplorerNewSqlMessage;
 
 export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider {
   static readonly viewId = 'dataViewer.explorer';
@@ -37,6 +52,12 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
     watcher.onDidDelete(scheduleRefresh);
     watcher.onDidChange(scheduleRefresh);
     context.subscriptions.push(watcher);
+
+    const sqlWatcher = vscode.workspace.createFileSystemWatcher('**/.dataviewer/queries/**/*.sql');
+    sqlWatcher.onDidCreate(scheduleRefresh);
+    sqlWatcher.onDidDelete(scheduleRefresh);
+    sqlWatcher.onDidChange(scheduleRefresh);
+    context.subscriptions.push(sqlWatcher);
 
     context.subscriptions.push(
       vscode.workspace.onDidChangeWorkspaceFolders(() => {
@@ -76,6 +97,18 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
           if (target) {
             await vscode.commands.executeCommand('dataViewer.openFile', target);
           }
+          return;
+        }
+        if (message.type === 'openSql') {
+          await openSqlSnippet(message.payload.filePath);
+          return;
+        }
+        if (message.type === 'newSql') {
+          const uri = await createSqlSnippet();
+          if (uri) {
+            await openSqlSnippet(uri.fsPath);
+            await this.sendFiles();
+          }
         }
       },
     );
@@ -111,9 +144,10 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
       return;
     }
     const { files, workspaceOpen } = await scanDataFiles();
+    const sqlFiles = await listSqlSnippets();
     await this.view.webview.postMessage({
       type: 'files',
-      payload: { files, workspaceOpen },
+      payload: { files, sqlFiles, workspaceOpen },
     });
   }
 

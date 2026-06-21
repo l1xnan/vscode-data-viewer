@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
-import { DataTarget, SQL_SCHEME } from './constants';
+import { DataTarget } from './constants';
 import { DuckDBService } from './duckdb/duckdbService';
+import { createSqlSnippet, openSqlSnippet } from './sql/sqlSnippetStore';
 import { DataFileExplorerViewProvider } from './tree/dataFileExplorerViewProvider';
+import { isQueriesSqlFile } from './utils/sqlPaths';
 import { DataViewerManager } from './viewer/dataViewerManager';
 import { SqlCodeLensProvider } from './viewer/sqlCodeLensProvider';
 import { SqlCompletionProvider } from './viewer/sqlCompletionProvider';
-import { SqlDocumentProvider } from './viewer/sqlDocumentProvider';
 
 let explorerProvider: DataFileExplorerViewProvider | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const duckdb = DuckDBService.getInstance();
-  const sqlProvider = new SqlDocumentProvider();
-  const viewerManager = new DataViewerManager(context, duckdb, sqlProvider);
+  const viewerManager = new DataViewerManager(context, duckdb);
   const sqlCodeLensProvider = new SqlCodeLensProvider();
 
   explorerProvider = new DataFileExplorerViewProvider(context);
@@ -22,13 +22,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       explorerProvider,
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
-  );
-
-  context.subscriptions.push(
-    vscode.workspace.registerFileSystemProvider(SQL_SCHEME, sqlProvider, {
-      isCaseSensitive: true,
-      isReadonly: false,
-    }),
   );
 
   context.subscriptions.push(
@@ -44,24 +37,40 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('dataViewer.runQuery', async () => {
-      await viewerManager.runActiveQuery();
+    vscode.commands.registerCommand('dataViewer.newSqlFile', async () => {
+      const uri = await createSqlSnippet();
+      if (uri) {
+        await openSqlSnippet(uri.fsPath);
+        void explorerProvider?.refresh();
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('dataViewer.openSqlFile', async (filePath: string) => {
+      await openSqlSnippet(filePath);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('dataViewer.runSqlFileQuery', async () => {
+      await viewerManager.runSqlFileQuery();
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      'dataViewer.runStatement',
+      'dataViewer.runSqlFileStatement',
       async (uriString: string, startOffset: number, endOffset: number) => {
-        await viewerManager.runStatement(uriString, startOffset, endOffset);
+        await viewerManager.runSqlFileStatement(uriString, startOffset, endOffset);
       },
     ),
   );
 
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
-      { language: 'sql', scheme: 'dataviewer-sql' },
-      new SqlCompletionProvider(duckdb, viewerManager),
+      { language: 'sql' },
+      new SqlCompletionProvider(duckdb),
       '.',
       ' ',
       '\t',
@@ -69,15 +78,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider(
-      { language: 'sql', scheme: 'dataviewer-sql' },
-      sqlCodeLensProvider,
-    ),
+    vscode.languages.registerCodeLensProvider({ language: 'sql' }, sqlCodeLensProvider),
   );
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((event) => {
-      if (event.document.uri.scheme === SQL_SCHEME) {
+      if (isQueriesSqlFile(event.document.uri)) {
         sqlCodeLensProvider.refresh();
       }
     }),
