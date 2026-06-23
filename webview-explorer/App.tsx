@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { countTreeFiles, FileTree, filterTree } from './FileTree';
+import { countTreeFiles, FileTree, filterTree, TreeFileRow } from './FileTree';
 import { newSql, notifyReady, openSql, requestSheets } from './messaging';
 import { DataFileTreeNode, ExtensionMessage, ScannedSqlFile } from './types';
 
@@ -138,17 +138,13 @@ export function App() {
           </div>
         ) : (
           filteredSqlFiles.map((file) => (
-            <button
+            <TreeFileRow
               key={file.filePath}
-              type="button"
-              className="file-item sql-file"
-              onClick={() => openSql(file.filePath)}
+              label={file.fileName}
               title={file.filePath}
-            >
-              <span className="expand-icon" />
-              <span>{file.fileName}</span>
-              <span className="file-meta">sql</span>
-            </button>
+              className="tree-row-file tree-row-sql"
+              onClick={() => openSql(file.filePath)}
+            />
           ))
         )}
       </div>

@@ -1,5 +1,8 @@
-import { openFile, requestSheets } from './messaging';
+import { Codicon, getDataFileIcon } from './codicons';
+import { openFile } from './messaging';
 import { DataFileTreeNode } from './types';
+
+const TREE_INDENT = 8;
 
 interface FileTreeProps {
   nodes: DataFileTreeNode[];
@@ -71,7 +74,7 @@ export function FileTree({
   forceExpand = false,
 }: FileTreeProps) {
   return (
-    <>
+    <div className="tree-root" role="tree">
       {nodes.map((node) => (
         <TreeNode
           key={node.path}
@@ -85,7 +88,7 @@ export function FileTree({
           forceExpand={forceExpand}
         />
       ))}
-    </>
+    </div>
   );
 }
 
@@ -100,6 +103,83 @@ interface TreeNodeProps {
   forceExpand: boolean;
 }
 
+type TwistieState = 'collapsed' | 'expanded' | 'hidden';
+
+interface TreeRowProps {
+  depth: number;
+  twistie: TwistieState;
+  icon: string;
+  label: string;
+  title?: string;
+  onClick?: () => void;
+  className?: string;
+  iconClassName?: string;
+}
+
+function TreeRow({
+  depth,
+  twistie,
+  icon,
+  label,
+  title,
+  onClick,
+  className,
+  iconClassName,
+}: TreeRowProps) {
+  return (
+    <button
+      type="button"
+      className={['tree-row', className].filter(Boolean).join(' ')}
+      onClick={onClick}
+      title={title ?? label}
+      role="treeitem"
+      aria-expanded={twistie === 'expanded' ? true : twistie === 'collapsed' ? false : undefined}
+    >
+      {Array.from({ length: depth }, (_, index) => (
+        <span key={index} className="tree-indent" aria-hidden />
+      ))}
+      {twistie === 'hidden' ? (
+        <span className="tree-twistie hidden" aria-hidden />
+      ) : (
+        <Codicon
+          name={twistie === 'expanded' ? 'chevron-down' : 'chevron-right'}
+          className="tree-twistie"
+        />
+      )}
+      <span className={['tree-icon', iconClassName].filter(Boolean).join(' ')} aria-hidden>
+        <Codicon name={icon} />
+      </span>
+      <span className="tree-label">{label}</span>
+    </button>
+  );
+}
+
+export function TreeFileRow({
+  label,
+  title,
+  onClick,
+  className,
+  icon = 'file-code',
+}: {
+  label: string;
+  title?: string;
+  onClick: () => void;
+  className?: string;
+  icon?: string;
+}) {
+  return (
+    <TreeRow
+      depth={0}
+      twistie="hidden"
+      icon={icon}
+      label={label}
+      title={title}
+      className={className}
+      onClick={onClick}
+    />
+  );
+}
+
 function TreeNode({
   node,
   depth,
@@ -110,24 +190,21 @@ function TreeNode({
   onToggleWorkbook,
   forceExpand,
 }: TreeNodeProps) {
-  const indent = depth * 12;
-
   if (node.kind === 'folder') {
     const isExpanded = forceExpand || expanded[node.path];
     const hasChildren = (node.children?.length ?? 0) > 0;
 
     return (
-      <div>
-        <button
-          type="button"
-          className="file-item folder"
-          style={{ paddingLeft: `${8 + indent}px` }}
-          onClick={() => onToggleFolder(node.path)}
+      <div className="tree-node" role="group">
+        <TreeRow
+          depth={depth}
+          twistie={hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'hidden'}
+          icon={isExpanded && hasChildren ? 'folder-opened' : 'folder'}
+          label={node.name}
           title={node.path}
-        >
-          <span className="expand-icon">{hasChildren ? (isExpanded ? '▼' : '▶') : ''}</span>
-          <span>{node.name}</span>
-        </button>
+          className="tree-row-folder"
+          onClick={() => onToggleFolder(node.path)}
+        />
         {isExpanded && hasChildren ? (
           <FileTree
             nodes={node.children ?? []}
@@ -150,34 +227,40 @@ function TreeNode({
     const loading = loadingSheets[node.path];
 
     return (
-      <div>
-        <button
-          type="button"
-          className="file-item workbook"
-          style={{ paddingLeft: `${8 + indent}px` }}
-          onClick={() => onToggleWorkbook(node)}
+      <div className="tree-node" role="group">
+        <TreeRow
+          depth={depth}
+          twistie={isExpanded ? 'expanded' : 'collapsed'}
+          icon="table"
+          label={node.name}
           title={node.path}
-        >
-          <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-          <span>{node.name}</span>
-          <span className="file-meta">xlsx</span>
-        </button>
+          className="tree-row-workbook"
+          iconClassName="tree-icon-spreadsheet"
+          onClick={() => onToggleWorkbook(node)}
+        />
         {isExpanded ? (
-          <div className="sheet-list" style={{ paddingLeft: `${20 + indent}px` }}>
+          <div className="tree-children" role="group">
             {loading ? (
-              <div className="empty-state">Loading sheets...</div>
+              <div className="tree-status" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT + 32}px` }}>
+                <Codicon name="loading" className="tree-status-icon" />
+                Loading sheets...
+              </div>
             ) : sheets.length === 0 ? (
-              <div className="empty-state">No sheets found</div>
+              <div className="tree-status" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT + 32}px` }}>
+                No sheets found
+              </div>
             ) : (
               sheets.map((sheetName) => (
-                <button
+                <TreeRow
                   key={`${node.path}:${sheetName}`}
-                  type="button"
-                  className="sheet-item"
+                  depth={depth + 1}
+                  twistie="hidden"
+                  icon="symbol-misc"
+                  label={sheetName}
+                  className="tree-row-sheet"
+                  iconClassName="tree-icon-sheet"
                   onClick={() => openFile(node.path, node.extension ?? '.xlsx', sheetName)}
-                >
-                  <span>{sheetName}</span>
-                </button>
+                />
               ))
             )}
           </div>
@@ -186,17 +269,17 @@ function TreeNode({
     );
   }
 
+  const extension = node.extension ?? '';
   return (
-    <button
-      type="button"
-      className="file-item"
-      style={{ paddingLeft: `${8 + indent}px` }}
-      onClick={() => openFile(node.path, node.extension ?? '')}
+    <TreeRow
+      depth={depth}
+      twistie="hidden"
+      icon={getDataFileIcon(extension)}
+      label={node.name}
       title={node.path}
-    >
-      <span className="expand-icon" />
-      <span>{node.name}</span>
-      <span className="file-meta">{(node.extension ?? '').replace('.', '')}</span>
-    </button>
+      className="tree-row-file"
+      iconClassName={`tree-icon-ext tree-icon-ext-${extension.replace('.', '') || 'file'}`}
+      onClick={() => openFile(node.path, extension)}
+    />
   );
 }

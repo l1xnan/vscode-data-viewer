@@ -54,75 +54,161 @@ body,
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 4px 0;
+  padding: 0;
 }
 
-.file-item,
-.sheet-item {
+.tree-root {
+  padding: 0;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 22px;
+  padding: 0 12px 0 0;
+  border: none;
+  background: transparent;
+  color: var(--vscode-sideBar-foreground);
+  font: inherit;
+  font-size: inherit;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+
+.tree-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.tree-row:focus {
+  outline: none;
+}
+
+.tree-row:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.tree-indent {
+  position: relative;
+  flex: 0 0 8px;
+  width: 8px;
+  height: 22px;
+}
+
+.tree-indent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--vscode-tree-indentGuidesStroke);
+}
+
+.tree-twistie {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  color: var(--vscode-icon-foreground);
+  opacity: 0.9;
+}
+
+.tree-twistie.hidden {
+  visibility: hidden;
+}
+
+.tree-icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+}
+
+.tree-icon .codicon {
+  font-size: 16px;
+  line-height: 16px;
+}
+
+.tree-row-folder .tree-icon {
+  color: var(--vscode-symbolIcon-folderForeground, #dcb67a);
+}
+
+.tree-row-file .tree-icon-ext-file,
+.tree-row-sheet .tree-icon-sheet {
+  color: var(--vscode-symbolIcon-fileForeground, var(--vscode-icon-foreground));
+}
+
+.tree-icon-ext-json {
+  color: var(--vscode-symbolIcon-arrayForeground, #ccb186);
+}
+
+.tree-icon-ext-csv,
+.tree-icon-ext-tsv,
+.tree-icon-spreadsheet,
+.tree-icon-sheet {
+  color: var(--vscode-symbolIcon-structForeground, #75beff);
+}
+
+.tree-icon-ext-parquet {
+  color: var(--vscode-symbolIcon-classForeground, #ee9d28);
+}
+
+.tree-status {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
-  padding: 4px 8px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.file-item:hover,
-.sheet-item:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.file-item.folder {
-  font-weight: 500;
-  color: var(--vscode-foreground);
-}
-
-.file-item.folder:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.file-item.workbook {
-  font-weight: 500;
-}
-
-.sheet-list {
-  padding-left: 20px;
-}
-
-.sheet-item {
+  height: 22px;
+  padding-right: 12px;
+  line-height: 22px;
   color: var(--vscode-descriptionForeground);
+  font-size: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-status-icon {
+  font-size: 14px;
+  animation: codicon-spin 1.5s linear infinite;
+}
+
+.tree-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .empty-state {
-  padding: 16px 12px;
+  padding: 8px 20px;
   color: var(--vscode-descriptionForeground);
-  text-align: center;
-  line-height: 1.5;
-}
-
-.file-meta {
-  margin-left: auto;
-  font-size: 0.85em;
-  color: var(--vscode-descriptionForeground);
+  line-height: 22px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 8px 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--vscode-sideBarSectionHeader-foreground);
   background: var(--vscode-sideBarSectionHeader-background);
-  border-top: 1px solid var(--vscode-panel-border);
+  border-top: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+  user-select: none;
 }
 
 .section-header-sql {
@@ -145,14 +231,6 @@ body,
   background: var(--vscode-button-secondaryHoverBackground);
 }
 
-.file-item.sql-file {
-  color: var(--vscode-textLink-foreground);
+.tree-row-sql .tree-icon {
+  color: var(--vscode-symbolIcon-methodForeground, #b180d7);
 }
-
-.expand-icon {
-  width: 16px;
-  display: inline-block;
-  text-align: center;
-  opacity: 0.8;
-}
-
