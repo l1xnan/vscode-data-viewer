@@ -13,9 +13,10 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'vscode',
+        // Native modules cannot be bundled — ship via node_modules in the VSIX.
         '@duckdb/node-api',
         '@duckdb/node-bindings',
-        'xlsx',
+        /^@duckdb\/node-bindings-/,
         'fs',
         'path',
         'crypto',

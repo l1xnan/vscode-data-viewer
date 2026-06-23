@@ -7,7 +7,16 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: win32-x64
+          - os: macos-latest
+            target: darwin-arm64
+          - os: ubuntu-latest
+            target: linux-x64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -18,15 +27,16 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+      - run: npm run prune:duckdb-bindings
 
       - name: Install vsce
         run: npm install -g @vscode/vsce
 
       - name: Package VSIX
-        run: vsce package
+        run: vsce package --target ${{ matrix.target }} -o vscode-data-viewer-${{ matrix.target }}.vsix
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vscode-data-viewer
-          path: '*.vsix'
+          name: vscode-data-viewer-${{ matrix.target }}
+          path: vscode-data-viewer-${{ matrix.target }}.vsix

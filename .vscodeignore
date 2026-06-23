@@ -2,10 +2,13 @@
 .vscode-test/**
 src/**
 webview/**
+scripts/**
 node_modules/**
+!node_modules/@duckdb/**
 **/*.ts
 **/*.map
 vite.config.*.ts
 tsconfig*.json
 .gitignore
 **/.DS_Store
+*.vsix
