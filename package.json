@@ -4,6 +4,7 @@
   "description": "Browse and query parquet, csv, json, xlsx files with DuckDB SQL",
   "version": "0.1.0",
   "publisher": "l1xnan",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/l1xnan/vscode-data-viewer"
@@ -186,7 +187,7 @@
     "@types/vscode-webview": "^1.57.5",
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^10.0.3",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.1-rc",
     "vite": "^8.0.16"
   }
 }

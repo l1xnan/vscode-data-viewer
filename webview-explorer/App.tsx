@@ -1,7 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { countTreeFiles, FileTree, filterTree, TreeFileRow } from './FileTree';
 import { newSql, notifyReady, openSql, requestSheets } from './messaging';
-import { DataFileTreeNode, ExtensionMessage, ScannedSqlFile } from './types';
+import { DataFileTreeNode, ExtensionMessage, ScannedSqlFile, vscode } from './types';
+
+const DEFAULT_SPLIT_RATIO = 0.65;
+const MIN_SPLIT_RATIO = 0.2;
+const MAX_SPLIT_RATIO = 0.8;
+
+function clampSplitRatio(value: number): number {
+  return Math.min(MAX_SPLIT_RATIO, Math.max(MIN_SPLIT_RATIO, value));
+}
+
+function readSplitRatio(): number {
+  const saved = vscode.getState()?.splitRatio;
+  return typeof saved === 'number' ? clampSplitRatio(saved) : DEFAULT_SPLIT_RATIO;
+}
 
 function matchesSearch(text: string, search: string): boolean {
   if (!search.trim()) {
@@ -19,6 +32,15 @@ export function App() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sheetsByFile, setSheetsByFile] = useState<Record<string, string[]>>({});
   const [loadingSheets, setLoadingSheets] = useState<Record<string, boolean>>({});
+  const [splitRatio, setSplitRatio] = useState(readSplitRatio);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+
+  const panelsRef = useRef<HTMLDivElement>(null);
+  const splitRatioRef = useRef(splitRatio);
+
+  useEffect(() => {
+    splitRatioRef.current = splitRatio;
+  }, [splitRatio]);
 
   useEffect(() => {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
@@ -55,6 +77,51 @@ export function App() {
     notifyReady();
     return () => window.removeEventListener('message', handler);
   }, []);
+
+  const updateSplitFromPointer = useCallback((clientY: number) => {
+    const panels = panelsRef.current;
+    if (!panels) {
+      return;
+    }
+    const rect = panels.getBoundingClientRect();
+    const splitterHeight = panels.querySelector('.panel-splitter')?.getBoundingClientRect().height ?? 1;
+    const available = rect.height - splitterHeight;
+    if (available <= 0) {
+      return;
+    }
+    setSplitRatio(clampSplitRatio((clientY - rect.top) / available));
+  }, []);
+
+  const startSplitDrag = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDraggingSplit(true);
+      updateSplitFromPointer(event.clientY);
+    },
+    [updateSplitFromPointer],
+  );
+
+  useEffect(() => {
+    if (!isDraggingSplit) {
+      return;
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      updateSplitFromPointer(event.clientY);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSplit(false);
+      vscode.setState({ ...vscode.getState(), splitRatio: splitRatioRef.current });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingSplit, updateSplitFromPointer]);
 
   const fileCount = useMemo(() => countTreeFiles(tree), [tree]);
   const visibleTree = useMemo(
@@ -96,7 +163,7 @@ export function App() {
     !loaded || !workspaceOpen || fileCount === 0 || (search.trim() && visibleFileCount === 0);
 
   return (
-    <div className="explorer">
+    <div className={`explorer${isDraggingSplit ? ' explorer-split-dragging' : ''}`}>
       <div className="search-bar">
         <input
           className="search-input"
@@ -108,45 +175,63 @@ export function App() {
         />
       </div>
 
-      <div className="file-list">
-        <div className="section-header">
-          <span>Data Files</span>
-        </div>
-        {showDataEmpty ? (
-          <div className="empty-state">{emptyDataMessage}</div>
-        ) : (
-          <FileTree
-            nodes={visibleTree}
-            expanded={expanded}
-            sheetsByFile={sheetsByFile}
-            loadingSheets={loadingSheets}
-            onToggleFolder={toggleFolder}
-            onToggleWorkbook={toggleWorkbook}
-            forceExpand={Boolean(search.trim())}
-          />
-        )}
-
-        <div className="section-header section-header-sql">
-          <span>SQL Files</span>
-          <button type="button" className="new-sql-button" onClick={() => newSql()} title="New Query">
-            +
-          </button>
-        </div>
-        {filteredSqlFiles.length === 0 ? (
-          <div className="empty-state">
-            {workspaceOpen ? 'No SQL snippets yet. Click + to create one.' : 'Open a workspace folder.'}
+      <div className="panels" ref={panelsRef}>
+        <section className="panel panel-data" style={{ flex: `${splitRatio} 1 0` }}>
+          <div className="section-header section-header-first">
+            <span>Data Files</span>
           </div>
-        ) : (
-          filteredSqlFiles.map((file) => (
-            <TreeFileRow
-              key={file.filePath}
-              label={file.fileName}
-              title={file.filePath}
-              className="tree-row-file tree-row-sql"
-              onClick={() => openSql(file.filePath)}
-            />
-          ))
-        )}
+          <div className="panel-body">
+            {showDataEmpty ? (
+              <div className="empty-state">{emptyDataMessage}</div>
+            ) : (
+              <FileTree
+                nodes={visibleTree}
+                expanded={expanded}
+                sheetsByFile={sheetsByFile}
+                loadingSheets={loadingSheets}
+                onToggleFolder={toggleFolder}
+                onToggleWorkbook={toggleWorkbook}
+                forceExpand={Boolean(search.trim())}
+              />
+            )}
+          </div>
+        </section>
+
+        <div
+          className={`panel-splitter${isDraggingSplit ? ' dragging' : ''}`}
+          role="separator"
+          aria-orientation="horizontal"
+          aria-valuenow={Math.round(splitRatio * 100)}
+          aria-valuemin={Math.round(MIN_SPLIT_RATIO * 100)}
+          aria-valuemax={Math.round(MAX_SPLIT_RATIO * 100)}
+          onMouseDown={startSplitDrag}
+        />
+
+        <section className="panel panel-sql" style={{ flex: `${1 - splitRatio} 1 0` }}>
+          <div className="section-header">
+            <span>SQL Files</span>
+            <button type="button" className="new-sql-button" onClick={() => newSql()} title="New Query">
+              +
+            </button>
+          </div>
+          <div className="panel-body">
+            {filteredSqlFiles.length === 0 ? (
+              <div className="empty-state">
+                {workspaceOpen ? 'No SQL snippets yet. Click + to create one.' : 'Open a workspace folder.'}
+              </div>
+            ) : (
+              filteredSqlFiles.map((file) => (
+                <TreeFileRow
+                  key={file.filePath}
+                  label={file.fileName}
+                  title={file.filePath}
+                  className="tree-row-file tree-row-sql"
+                  onClick={() => openSql(file.filePath)}
+                />
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

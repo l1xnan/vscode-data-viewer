@@ -45,6 +45,8 @@ export type WebviewMessage =
 
 declare function acquireVsCodeApi(): {
   postMessage(message: WebviewMessage): void;
+  getState(): Record<string, unknown> | undefined;
+  setState(state: Record<string, unknown>): void;
 };
 
 export const vscode = acquireVsCodeApi();

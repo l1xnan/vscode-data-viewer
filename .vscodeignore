@@ -11,4 +11,5 @@ vite.config.*.ts
 tsconfig*.json
 .gitignore
 **/.DS_Store
+sample-data
 *.vsix
