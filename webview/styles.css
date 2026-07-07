@@ -13,26 +13,36 @@
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+html {
+  height: 100%;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
   padding: 8px;
   gap: 0;
-  min-height: 0;
+  overflow: hidden;
 }
 
 .editor-section {
   display: flex;
   flex-direction: column;
+  flex: 0 0 auto;
   min-height: 80px;
   border: 1px solid var(--vscode-panel-border);
   background: var(--vscode-editor-background);
@@ -78,14 +88,46 @@ body {
 }
 
 .splitter {
-  flex: 0 0 6px;
+  position: relative;
+  flex: 0 0 1px;
+  min-height: 1px;
   cursor: row-resize;
-  background: var(--vscode-panel-border);
-  margin: 4px 0;
+  touch-action: none;
+  background: transparent;
+  z-index: 1;
 }
 
-.splitter:hover {
-  background: var(--vscode-focusBorder);
+.splitter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+}
+
+.splitter::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--vscode-panel-border);
+  pointer-events: none;
+}
+
+.splitter:hover::after,
+.splitter.dragging::after {
+  top: -1.5px;
+  height: 4px;
+  background: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
+.app-split-dragging,
+.app-split-dragging * {
+  cursor: row-resize !important;
+  user-select: none;
 }
 
 .table-section {

@@ -34,11 +34,14 @@ body,
 
 .search-input {
   width: 100%;
-  padding: 6px 8px;
+  height: 24px;
+  padding: 3px 6px;
   border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
   font: inherit;
+  line-height: 16px;
   outline: none;
 }
 

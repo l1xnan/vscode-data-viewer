@@ -35,13 +35,48 @@ export function App() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editorHeight, setEditorHeight] = useState(DEFAULT_EDITOR_HEIGHT);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const filterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sqlRef = useRef(sql);
-  const draggingRef = useRef(false);
+  const appRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(DEFAULT_EDITOR_HEIGHT);
 
   sqlRef.current = sql;
+
+  const getMaxEditorHeight = useCallback(() => {
+    const app = appRef.current;
+    if (!app) {
+      return DEFAULT_EDITOR_HEIGHT;
+    }
+
+    const splitter = app.querySelector<HTMLElement>('.splitter');
+    const tableSection = app.querySelector<HTMLElement>('.table-section');
+    const errorBanner = app.querySelector<HTMLElement>('.error-banner');
+    const splitterHeight = splitter?.getBoundingClientRect().height ?? 1;
+    const tableToolbarHeight =
+      tableSection?.querySelector<HTMLElement>('.toolbar')?.getBoundingClientRect().height ?? 40;
+    const reserved =
+      splitterHeight +
+      tableToolbarHeight +
+      MIN_TABLE_HEIGHT +
+      (errorBanner?.getBoundingClientRect().height ?? 0);
+
+    return Math.max(MIN_EDITOR_HEIGHT, app.clientHeight - reserved);
+  }, []);
+
+  const updateEditorHeightFromPointer = useCallback(
+    (clientY: number) => {
+      const delta = clientY - dragStartYRef.current;
+      const maxHeight = getMaxEditorHeight();
+      const next = Math.min(
+        Math.max(dragStartHeightRef.current + delta, MIN_EDITOR_HEIGHT),
+        maxHeight,
+      );
+      setEditorHeight(next);
+    },
+    [getMaxEditorHeight],
+  );
 
   const sendQuery = useCallback(
     (
@@ -95,36 +130,37 @@ export function App() {
     return () => window.removeEventListener('message', handler);
   }, []);
 
+  const startDrag = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      dragStartYRef.current = event.clientY;
+      dragStartHeightRef.current = editorHeight;
+      setIsDraggingSplit(true);
+      updateEditorHeightFromPointer(event.clientY);
+    },
+    [editorHeight, updateEditorHeightFromPointer],
+  );
+
   useEffect(() => {
-    const onMouseMove = (event: MouseEvent) => {
-      if (!draggingRef.current) {
-        return;
-      }
-      const delta = event.clientY - dragStartYRef.current;
-      const app = document.querySelector('.app');
-      const maxHeight = app
-        ? app.clientHeight - MIN_TABLE_HEIGHT - 48
-        : window.innerHeight - MIN_TABLE_HEIGHT - 48;
-      const next = Math.min(
-        Math.max(dragStartHeightRef.current + delta, MIN_EDITOR_HEIGHT),
-        maxHeight,
-      );
-      setEditorHeight(next);
+    if (!isDraggingSplit) {
+      return;
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      updateEditorHeightFromPointer(event.clientY);
     };
 
-    const onMouseUp = () => {
-      draggingRef.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+    const handleMouseUp = () => {
+      setIsDraggingSplit(false);
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [isDraggingSplit, updateEditorHeightFromPointer]);
 
   const handleRun = useCallback(() => {
     sendQuery(sqlRef.current, 1, result.pageSize, sorting, filters);
@@ -158,22 +194,17 @@ export function App() {
     }, 300);
   };
 
-  const startDrag = (event: React.MouseEvent) => {
-    draggingRef.current = true;
-    dragStartYRef.current = event.clientY;
-    dragStartHeightRef.current = editorHeight;
-    document.body.style.cursor = 'row-resize';
-    document.body.style.userSelect = 'none';
-  };
-
   if (!initialized) {
     return <div className="empty-state">Loading...</div>;
   }
 
   return (
-    <div className="app">
+    <div className={`app${isDraggingSplit ? ' app-split-dragging' : ''}`} ref={appRef}>
       {result.error ? <div className="error-banner">{result.error}</div> : null}
-      <div className="editor-section" style={{ height: editorHeight }}>
+      <div
+        className="editor-section"
+        style={{ height: editorHeight, flex: `0 0 ${editorHeight}px` }}
+      >
         <div className="editor-toolbar">
           <button type="button" className="run-button" onClick={handleRun}>
             Run (Ctrl+Enter)
@@ -188,9 +219,10 @@ export function App() {
         />
       </div>
       <div
-        className="splitter"
+        className={`splitter${isDraggingSplit ? ' dragging' : ''}`}
         role="separator"
         aria-orientation="horizontal"
+        aria-valuenow={editorHeight}
         onMouseDown={startDrag}
       />
       <div className="table-section">
