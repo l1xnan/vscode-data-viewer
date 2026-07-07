@@ -15,4 +15,11 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@lezer/highlight': resolve(__dirname, 'node_modules/@lezer/highlight'),
+      '@lezer/common': resolve(__dirname, 'node_modules/@lezer/common'),
+    },
+    dedupe: ['@lezer/highlight', '@lezer/common', '@codemirror/state', '@codemirror/language'],
+  },
 });

@@ -87,6 +87,100 @@ html {
   height: 100%;
 }
 
+/* Editor syntax tokens (Dark+/Light+ defaults; not symbolIcon-* which matches body text) */
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-keyword,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-keyword,
+.cm-editor .tok-keyword {
+  color: #569cd6 !important;
+}
+
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-keyword,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-keyword {
+  color: #0000ff !important;
+}
+
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-typeName,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-typeName,
+.cm-editor .tok-typeName {
+  color: #4ec9b0 !important;
+}
+
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-typeName,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-typeName {
+  color: #267f99 !important;
+}
+
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-string,
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-string2,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-string,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-string2,
+.cm-editor .tok-string,
+.cm-editor .tok-string2 {
+  color: #ce9178 !important;
+}
+
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-string,
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-string2,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-string,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-string2 {
+  color: #a31515 !important;
+}
+
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-number,
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-bool,
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-null,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-number,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-bool,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-null,
+.cm-editor .tok-number,
+.cm-editor .tok-bool,
+.cm-editor .tok-null {
+  color: #b5cea8 !important;
+}
+
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-number,
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-bool,
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-null,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-number,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-bool,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-null {
+  color: #098658 !important;
+}
+
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-comment,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-comment,
+.cm-editor .tok-comment {
+  color: #6a9955 !important;
+  font-style: italic;
+}
+
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-comment,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-comment {
+  color: #008000 !important;
+  font-style: italic;
+}
+
+body[data-vscode-theme-kind='vscode-dark'] .cm-editor .tok-function,
+body[data-vscode-theme-kind='vscode-high-contrast'] .cm-editor .tok-function,
+.cm-editor .tok-function {
+  color: #dcdcaa !important;
+}
+
+body[data-vscode-theme-kind='vscode-light'] .cm-editor .tok-function,
+body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-function {
+  color: #795e26 !important;
+}
+
+.cm-editor .tok-variableName,
+.cm-editor .tok-propertyName {
+  color: var(--vscode-editor-foreground) !important;
+}
+
+.cm-editor .tok-operator,
+.cm-editor .tok-punctuation {
+  color: var(--vscode-editor-foreground) !important;
+}
+
 .splitter {
   position: relative;
   flex: 0 0 1px;

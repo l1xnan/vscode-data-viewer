@@ -14,7 +14,12 @@ import {
   lineNumbers,
   placeholder,
 } from '@codemirror/view';
-import { buildSqlEditorTheme, subscribeToVsCodeThemeChanges } from '../codemirrorTheme';
+import {
+  buildSqlEditorViewTheme,
+  buildVsCodeSqlHighlighting,
+  sqlSyntaxHighlightingBase,
+  subscribeToVsCodeThemeChanges,
+} from '../codemirrorTheme';
 import { CompletionCatalogData, QueryColumn } from '../types';
 
 interface SqlEditorProps {
@@ -85,6 +90,7 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
   const onRunRef = useRef(onRun);
   const completionCompartment = useRef(new Compartment());
   const themeCompartment = useRef(new Compartment());
+  const highlightCompartment = useRef(new Compartment());
 
   onChangeRef.current = onChange;
   onRunRef.current = onRun;
@@ -111,7 +117,9 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
         lineNumbers(),
         history(),
         sql(),
-        themeCompartment.current.of(buildSqlEditorTheme()),
+        ...sqlSyntaxHighlightingBase,
+        highlightCompartment.current.of(buildVsCodeSqlHighlighting()),
+        themeCompartment.current.of(buildSqlEditorViewTheme()),
         placeholder('SELECT * FROM ...'),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         runKeymap,
@@ -134,7 +142,10 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
 
     const applyTheme = () => {
       view.dispatch({
-        effects: themeCompartment.current.reconfigure(buildSqlEditorTheme()),
+        effects: [
+          themeCompartment.current.reconfigure(buildSqlEditorViewTheme()),
+          highlightCompartment.current.reconfigure(buildVsCodeSqlHighlighting()),
+        ],
       });
     };
 
