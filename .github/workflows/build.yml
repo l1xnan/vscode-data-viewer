@@ -18,7 +18,7 @@ jobs:
             target: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
@@ -36,7 +36,24 @@ jobs:
         run: vsce package --target ${{ matrix.target }} -o vscode-data-viewer-${{ matrix.target }}.vsix
 
       - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-data-viewer-${{ matrix.target }}
           path: vscode-data-viewer-${{ matrix.target }}.vsix
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: vscode-data-viewer-*
+          merge-multiple: true
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vscode-data-viewer-*.vsix
+          generate_release_notes: true
