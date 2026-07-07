@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { sql } from '@codemirror/lang-sql';
 import {
@@ -20,7 +20,12 @@ import {
   sqlSyntaxHighlightingBase,
   subscribeToVsCodeThemeChanges,
 } from '../codemirrorTheme';
+import { getRunnableSql } from '../sqlRun';
 import { CompletionCatalogData, QueryColumn } from '../types';
+
+export interface SqlEditorHandle {
+  run: () => void;
+}
 
 interface SqlEditorProps {
   value: string;
@@ -83,7 +88,10 @@ function buildCompletionSource(
   };
 }
 
-export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEditorProps) {
+export const SqlEditor = forwardRef<SqlEditorHandle, SqlEditorProps>(function SqlEditor(
+  { value, catalog, columns, onChange, onRun },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -95,6 +103,16 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
   onChangeRef.current = onChange;
   onRunRef.current = onRun;
 
+  useImperativeHandle(ref, () => ({
+    run: () => {
+      const view = viewRef.current;
+      if (!view) {
+        return;
+      }
+      onRunRef.current(getRunnableSql(view.state));
+    },
+  }));
+
   useEffect(() => {
     if (!containerRef.current) {
       return;
@@ -105,7 +123,7 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
         key: 'Ctrl-Enter',
         mac: 'Cmd-Enter',
         run: (view) => {
-          onRunRef.current(view.state.doc.toString());
+          onRunRef.current(getRunnableSql(view.state));
           return true;
         },
       },
@@ -188,4 +206,4 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
   }, [catalog, columns]);
 
   return <div className="sql-editor" ref={containerRef} />;
-}
+});

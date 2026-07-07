@@ -63,7 +63,8 @@ html {
   background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
   border: none;
-  padding: 4px 10px;
+  font-size: 12px;
+  padding: 4px 8px;
   cursor: pointer;
   font: inherit;
 }
@@ -80,7 +81,7 @@ html {
     --vscode-editor-font-family,
     var(--vscode-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace)
   );
-  font-size: var(--vscode-editor-font-size, 13px);
+  font-size: calc(var(--vscode-editor-font-size, 14px) - 1px) !important;
 }
 
 .sql-editor .cm-editor {

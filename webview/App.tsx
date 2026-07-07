@@ -1,7 +1,7 @@
 import { SortingState } from '@tanstack/react-table';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DataTable } from './components/DataTable';
-import { SqlEditor } from './components/SqlEditor';
+import { SqlEditor, SqlEditorHandle } from './components/SqlEditor';
 import { TableToolbar } from './components/TableToolbar';
 import { DEFAULT_PAGE_SIZE } from './constants';
 import { notifyReady, postQuery } from './messaging';
@@ -37,12 +37,11 @@ export function App() {
   const [editorHeight, setEditorHeight] = useState(DEFAULT_EDITOR_HEIGHT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const filterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const sqlRef = useRef(sql);
+  const executedSqlRef = useRef(sql);
+  const sqlEditorRef = useRef<SqlEditorHandle>(null);
   const appRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(DEFAULT_EDITOR_HEIGHT);
-
-  sqlRef.current = sql;
 
   const getMaxEditorHeight = useCallback(() => {
     const app = appRef.current;
@@ -109,6 +108,7 @@ export function App() {
       const message = event.data;
       if (message?.type === 'init') {
         setSql(message.payload.sql);
+        executedSqlRef.current = message.payload.sql;
         setCatalog(message.payload.catalog);
         setCompletionColumns(message.payload.columns);
         setResult((prev) => ({ ...prev, pageSize: message.payload.pageSize }));
@@ -162,25 +162,37 @@ export function App() {
     };
   }, [isDraggingSplit, updateEditorHeightFromPointer]);
 
-  const handleRun = useCallback(() => {
-    sendQuery(sqlRef.current, 1, result.pageSize, sorting, filters);
-  }, [sendQuery, result.pageSize, sorting, filters]);
+  const handleRun = useCallback(
+    (sqlToRun: string) => {
+      const query = sqlToRun.trim();
+      if (!query) {
+        return;
+      }
+      executedSqlRef.current = query;
+      sendQuery(query, 1, result.pageSize, sorting, filters);
+    },
+    [sendQuery, result.pageSize, sorting, filters],
+  );
+
+  const runFromEditor = useCallback(() => {
+    sqlEditorRef.current?.run();
+  }, []);
 
   const handlePageChange = (page: number) => {
-    sendQuery(sql, page, result.pageSize, sorting, filters);
+    sendQuery(executedSqlRef.current, page, result.pageSize, sorting, filters);
   };
 
   const handlePageSizeChange = (pageSize: number) => {
-    sendQuery(sql, 1, pageSize, sorting, filters);
+    sendQuery(executedSqlRef.current, 1, pageSize, sorting, filters);
   };
 
   const handleRefresh = () => {
-    sendQuery(sql, result.page, result.pageSize, sorting, filters);
+    sendQuery(executedSqlRef.current, result.page, result.pageSize, sorting, filters);
   };
 
   const handleSortChange = (nextSorting: SortingState) => {
     setSorting(nextSorting);
-    sendQuery(sql, 1, result.pageSize, nextSorting, filters);
+    sendQuery(executedSqlRef.current, 1, result.pageSize, nextSorting, filters);
   };
 
   const handleFilterChange = (column: string, value: string) => {
@@ -190,7 +202,7 @@ export function App() {
       clearTimeout(filterTimer.current);
     }
     filterTimer.current = setTimeout(() => {
-      sendQuery(sql, 1, result.pageSize, sorting, nextFilters);
+      sendQuery(executedSqlRef.current, 1, result.pageSize, sorting, nextFilters);
     }, 300);
   };
 
@@ -206,11 +218,12 @@ export function App() {
         style={{ height: editorHeight, flex: `0 0 ${editorHeight}px` }}
       >
         <div className="editor-toolbar">
-          <button type="button" className="run-button" onClick={handleRun}>
+          <button type="button" className="run-button" onClick={runFromEditor}>
             Run (Ctrl+Enter)
           </button>
         </div>
         <SqlEditor
+          ref={sqlEditorRef}
           value={sql}
           catalog={catalog}
           columns={completionColumns}
