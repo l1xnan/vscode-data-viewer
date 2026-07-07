@@ -7,7 +7,6 @@ import {
   CompletionContext,
   CompletionSource,
 } from '@codemirror/autocomplete';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, EditorState } from '@codemirror/state';
 import {
   EditorView,
@@ -15,7 +14,7 @@ import {
   lineNumbers,
   placeholder,
 } from '@codemirror/view';
-import { tags as t } from '@lezer/highlight';
+import { buildSqlEditorTheme, subscribeToVsCodeThemeChanges } from '../codemirrorTheme';
 import { CompletionCatalogData, QueryColumn } from '../types';
 
 interface SqlEditorProps {
@@ -79,71 +78,13 @@ function buildCompletionSource(
   };
 }
 
-const sqlHighlightStyle = HighlightStyle.define([
-  { tag: t.keyword, color: 'var(--vscode-symbolIcon-keywordForeground, #569cd6)' },
-  { tag: t.string, color: 'var(--vscode-debugTokenExpression-string, #ce9178)' },
-  { tag: t.number, color: 'var(--vscode-debugTokenExpression-number, #b5cea8)' },
-  { tag: t.bool, color: 'var(--vscode-debugTokenExpression-boolean, #569cd6)' },
-  { tag: t.null, color: 'var(--vscode-debugTokenExpression-boolean, #569cd6)' },
-  { tag: t.comment, color: 'var(--vscode-textPreformat-foreground, #6a9955)', fontStyle: 'italic' },
-  { tag: t.operator, color: 'var(--vscode-editor-foreground)' },
-  { tag: t.punctuation, color: 'var(--vscode-editor-foreground)' },
-  { tag: t.function(t.variableName), color: 'var(--vscode-symbolIcon-functionForeground, #dcdcaa)' },
-  { tag: t.typeName, color: 'var(--vscode-symbolIcon-classForeground, #4ec9b0)' },
-  { tag: t.special(t.string), color: 'var(--vscode-debugTokenExpression-string, #ce9178)' },
-  { tag: t.name, color: 'var(--vscode-editor-foreground)' },
-]);
-
-const vscodeTheme = EditorView.theme({
-  '&': {
-    height: '100%',
-    backgroundColor: 'var(--vscode-editor-background)',
-    color: 'var(--vscode-editor-foreground)',
-  },
-  '.cm-scroller': {
-    fontFamily:
-      'var(--vscode-editor-font-family, var(--vscode-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace))',
-    fontSize: 'var(--vscode-editor-font-size, 13px)',
-    fontWeight: 'var(--vscode-editor-font-weight, normal)',
-    lineHeight: 'var(--vscode-editor-lineHeight, 1.5)',
-  },
-  '.cm-content, .cm-line': {
-    fontFamily: 'inherit',
-    fontSize: 'inherit',
-    fontWeight: 'inherit',
-    lineHeight: 'inherit',
-  },
-  '.cm-content': {
-    caretColor: 'var(--vscode-editorCursor-foreground)',
-    padding: '8px 0',
-  },
-  '.cm-gutters': {
-    fontFamily: 'inherit',
-    fontSize: 'inherit',
-    backgroundColor: 'var(--vscode-editorGutter-background)',
-    color: 'var(--vscode-editorLineNumber-foreground)',
-    borderRight: '1px solid var(--vscode-panel-border)',
-  },
-  '.cm-activeLineGutter': {
-    backgroundColor: 'var(--vscode-editor-lineHighlightBackground)',
-  },
-  '.cm-activeLine': {
-    backgroundColor: 'var(--vscode-editor-lineHighlightBackground)',
-  },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
-    backgroundColor: 'var(--vscode-editor-selectionBackground) !important',
-  },
-  '.cm-cursor': {
-    borderLeftColor: 'var(--vscode-editorCursor-foreground)',
-  },
-});
-
 export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onRunRef = useRef(onRun);
   const completionCompartment = useRef(new Compartment());
+  const themeCompartment = useRef(new Compartment());
 
   onChangeRef.current = onChange;
   onRunRef.current = onRun;
@@ -170,8 +111,7 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
         lineNumbers(),
         history(),
         sql(),
-        syntaxHighlighting(sqlHighlightStyle),
-        vscodeTheme,
+        themeCompartment.current.of(buildSqlEditorTheme()),
         placeholder('SELECT * FROM ...'),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         runKeymap,
@@ -192,7 +132,16 @@ export function SqlEditor({ value, catalog, columns, onChange, onRun }: SqlEdito
     const view = new EditorView({ state, parent: containerRef.current });
     viewRef.current = view;
 
+    const applyTheme = () => {
+      view.dispatch({
+        effects: themeCompartment.current.reconfigure(buildSqlEditorTheme()),
+      });
+    };
+
+    const unsubscribeTheme = subscribeToVsCodeThemeChanges(applyTheme);
+
     return () => {
+      unsubscribeTheme();
       view.destroy();
       viewRef.current = null;
     };

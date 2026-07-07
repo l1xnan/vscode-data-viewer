@@ -161,7 +161,7 @@
     "dev": "concurrently \"npm:watch:extension\" \"npm:watch:webview\"",
     "test": "node scripts/integration-test.mjs",
     "prune:duckdb-bindings": "node scripts/prune-duckdb-bindings.mjs",
-    "package:vsix": "npm run build && npm run prune:duckdb-bindings && npx vsce package",
+    "package:vsix": "npm run build && npm run prune:duckdb-bindings && npx @vscode/vsce package",
     "vscode:prepublish": "npm run build && npm run prune:duckdb-bindings"
   },
   "dependencies": {

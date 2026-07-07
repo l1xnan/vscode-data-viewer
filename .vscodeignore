@@ -2,6 +2,7 @@
 .vscode-test/**
 src/**
 webview/**
+webview-explorer/**
 scripts/**
 node_modules/**
 !node_modules/@duckdb/**

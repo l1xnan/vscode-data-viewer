@@ -50,7 +50,19 @@ export class DataViewerManager {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly duckdb: DuckDBService,
-  ) {}
+  ) {
+    context.subscriptions.push(
+      vscode.window.onDidChangeActiveColorTheme(() => {
+        this.notifyThemeChanged();
+      }),
+    );
+  }
+
+  private notifyThemeChanged(): void {
+    for (const session of this.sessionsByKey.values()) {
+      void session.panel.webview.postMessage({ type: 'themeChanged' });
+    }
+  }
 
   async openTarget(target: DataTarget): Promise<void> {
     await this.duckdb.initialize();

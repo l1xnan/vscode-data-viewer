@@ -47,6 +47,7 @@ export interface QueryPayload {
 export type ExtensionMessage =
   | { type: 'init'; payload: InitPayload }
   | { type: 'queryResult'; payload: QueryResultPayload }
-  | { type: 'setSql'; payload: { sql: string } };
+  | { type: 'setSql'; payload: { sql: string } }
+  | { type: 'themeChanged' };
 
 export type WebviewMessage = { type: 'ready' } | { type: 'query'; payload: QueryPayload };

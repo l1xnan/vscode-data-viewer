@@ -176,7 +176,7 @@ export function App() {
       </div>
 
       <div className="panels" ref={panelsRef}>
-        <section className="panel panel-data" style={{ flex: `${splitRatio} 1 0` }}>
+        <section className="panel panel-data" style={{ flex: `${splitRatio} 1 0%` }}>
           <div className="section-header section-header-first">
             <span>Data Files</span>
           </div>
@@ -207,7 +207,7 @@ export function App() {
           onMouseDown={startSplitDrag}
         />
 
-        <section className="panel panel-sql" style={{ flex: `${1 - splitRatio} 1 0` }}>
+        <section className="panel panel-sql" style={{ flex: `${1 - splitRatio} 1 0%` }}>
           <div className="section-header">
             <span>SQL Files</span>
             <button type="button" className="new-sql-button" onClick={() => newSql()} title="New Query">
