@@ -4,7 +4,7 @@ import { DataTable } from './components/DataTable';
 import { SqlEditor, SqlEditorHandle } from './components/SqlEditor';
 import { TableToolbar } from './components/TableToolbar';
 import { DEFAULT_PAGE_SIZE } from './constants';
-import { notifyReady, postQuery } from './messaging';
+import { notifyReady, postQuery, postSqlChanged } from './messaging';
 import {
   CompletionCatalogData,
   ExtensionMessage,
@@ -25,6 +25,7 @@ const emptyResult: QueryResultPayload = {
 const DEFAULT_EDITOR_HEIGHT = 220;
 const MIN_EDITOR_HEIGHT = 80;
 const MIN_TABLE_HEIGHT = 120;
+const SQL_SAVE_DEBOUNCE_MS = 400;
 
 export function App() {
   const [initialized, setInitialized] = useState(false);
@@ -37,11 +38,15 @@ export function App() {
   const [editorHeight, setEditorHeight] = useState(DEFAULT_EDITOR_HEIGHT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const filterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const sqlSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const executedSqlRef = useRef(sql);
+  const sqlRef = useRef(sql);
   const sqlEditorRef = useRef<SqlEditorHandle>(null);
   const appRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(DEFAULT_EDITOR_HEIGHT);
+
+  sqlRef.current = sql;
 
   const getMaxEditorHeight = useCallback(() => {
     const app = appRef.current;
@@ -178,6 +183,25 @@ export function App() {
     sqlEditorRef.current?.run();
   }, []);
 
+  const handleSqlChange = useCallback((value: string) => {
+    setSql(value);
+    if (sqlSaveTimer.current) {
+      clearTimeout(sqlSaveTimer.current);
+    }
+    sqlSaveTimer.current = setTimeout(() => {
+      postSqlChanged(value);
+    }, SQL_SAVE_DEBOUNCE_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (sqlSaveTimer.current) {
+        clearTimeout(sqlSaveTimer.current);
+      }
+      postSqlChanged(sqlRef.current);
+    };
+  }, []);
+
   const handlePageChange = (page: number) => {
     sendQuery(executedSqlRef.current, page, result.pageSize, sorting, filters);
   };
@@ -227,7 +251,7 @@ export function App() {
           value={sql}
           catalog={catalog}
           columns={completionColumns}
-          onChange={setSql}
+          onChange={handleSqlChange}
           onRun={handleRun}
         />
       </div>

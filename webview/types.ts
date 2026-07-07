@@ -50,4 +50,7 @@ export type ExtensionMessage =
   | { type: 'setSql'; payload: { sql: string } }
   | { type: 'themeChanged' };
 
-export type WebviewMessage = { type: 'ready' } | { type: 'query'; payload: QueryPayload };
+export type WebviewMessage =
+  | { type: 'ready' }
+  | { type: 'query'; payload: QueryPayload }
+  | { type: 'sqlChanged'; payload: { sql: string } };

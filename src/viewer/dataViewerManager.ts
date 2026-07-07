@@ -4,6 +4,7 @@ import { isQueriesSqlFile } from '../utils/sqlPaths';
 import { DEFAULT_PAGE_SIZE, DataTarget } from '../constants';
 import { DuckDBService } from '../duckdb/duckdbService';
 import { CompletionCatalogData, PageParams, QueryColumn } from '../duckdb/types';
+import { buildTargetSessionKey, SqlArchiveStore } from './sqlArchiveStore';
 import { getWebviewHtml } from './webviewHtml';
 
 interface ViewerSession {
@@ -32,7 +33,12 @@ interface WebviewReadyMessage {
   type: 'ready';
 }
 
-type WebviewMessage = WebviewQueryMessage | WebviewReadyMessage;
+interface WebviewSqlChangedMessage {
+  type: 'sqlChanged';
+  payload: { sql: string };
+}
+
+type WebviewMessage = WebviewQueryMessage | WebviewReadyMessage | WebviewSqlChangedMessage;
 
 interface CreateViewerOptions {
   title: string;
@@ -46,11 +52,14 @@ interface CreateViewerOptions {
 
 export class DataViewerManager {
   private readonly sessionsByKey = new Map<string, ViewerSession>();
+  private readonly sqlArchive: SqlArchiveStore;
+  private readonly saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly duckdb: DuckDBService,
   ) {
+    this.sqlArchive = new SqlArchiveStore(context.workspaceState);
     context.subscriptions.push(
       vscode.window.onDidChangeActiveColorTheme(() => {
         this.notifyThemeChanged();
@@ -68,7 +77,7 @@ export class DataViewerManager {
     await this.duckdb.initialize();
     await this.duckdb.prepareTarget(target);
 
-    const key = `target:${target.filePath}\0${target.sheetName ?? ''}`;
+    const key = buildTargetSessionKey(target);
     const existing = this.sessionsByKey.get(key);
     if (existing) {
       existing.panel.reveal();
@@ -76,11 +85,12 @@ export class DataViewerManager {
     }
 
     const defaultSql = this.duckdb.getDefaultUserSql(target);
+    const initSql = this.sqlArchive.get(key) ?? defaultSql;
     const columns = await this.duckdb.describeTarget(target);
 
     await this.createViewerPanel({
       title: target.displayName,
-      initSql: defaultSql,
+      initSql,
       key,
       target,
       columns,
@@ -99,13 +109,17 @@ export class DataViewerManager {
       existing.panel.title = title;
       existing.panel.reveal();
       existing.panel.webview.postMessage({ type: 'setSql', payload: { sql: existing.userSql } });
+      this.persistSql(key, existing.userSql);
       await this.pushQueryResult(existing);
       return;
     }
 
+    const initSql =
+      (sourceUri ? this.sqlArchive.get(key) : undefined) ?? sql.trim().replace(/;\s*$/, '');
+
     await this.createViewerPanel({
       title,
-      initSql: sql.trim().replace(/;\s*$/, ''),
+      initSql,
       key,
       sourceUri,
       columns: [],
@@ -183,6 +197,14 @@ export class DataViewerManager {
     this.sessionsByKey.set(options.key, session);
 
     panel.onDidDispose(() => {
+      const timer = this.saveTimers.get(options.key);
+      if (timer) {
+        clearTimeout(timer);
+        this.saveTimers.delete(options.key);
+      }
+      if (this.shouldPersistSql(session)) {
+        void this.sqlArchive.save(options.key, session.userSql);
+      }
       this.sessionsByKey.delete(options.key);
     });
 
@@ -200,6 +222,11 @@ export class DataViewerManager {
         await this.pushQueryResult(session);
         return;
       }
+      if (message.type === 'sqlChanged') {
+        session.userSql = message.payload.sql;
+        this.schedulePersistSql(session);
+        return;
+      }
       if (message.type === 'query') {
         session.userSql = message.payload.sql.trim().replace(/;\s*$/, '');
         session.pageParams = {
@@ -208,9 +235,35 @@ export class DataViewerManager {
           sort: message.payload.sort,
           filters: message.payload.filters,
         };
+        this.persistSql(session.key, session.userSql);
         await this.pushQueryResult(session);
       }
     });
+  }
+
+  private shouldPersistSql(session: ViewerSession): boolean {
+    return session.target !== undefined || session.sourceUri !== undefined;
+  }
+
+  private schedulePersistSql(session: ViewerSession): void {
+    if (!this.shouldPersistSql(session)) {
+      return;
+    }
+
+    const existing = this.saveTimers.get(session.key);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    const timer = setTimeout(() => {
+      this.saveTimers.delete(session.key);
+      this.persistSql(session.key, session.userSql);
+    }, 400);
+    this.saveTimers.set(session.key, timer);
+  }
+
+  private persistSql(sessionKey: string, sql: string): void {
+    void this.sqlArchive.save(sessionKey, sql);
   }
 
   private async pushQueryResult(session: ViewerSession): Promise<void> {
