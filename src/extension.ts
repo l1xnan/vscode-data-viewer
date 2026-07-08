@@ -11,7 +11,7 @@ import { SqlCompletionProvider } from './viewer/sqlCompletionProvider';
 let explorerProvider: DataFileExplorerViewProvider | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const duckdb = DuckDBService.getInstance();
+  const duckdb = DuckDBService.getInstance(context.globalState);
   const viewerManager = new DataViewerManager(context, duckdb);
   const sqlCodeLensProvider = new SqlCodeLensProvider();
 

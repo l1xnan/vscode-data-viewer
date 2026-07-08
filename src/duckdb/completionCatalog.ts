@@ -1,12 +1,23 @@
 import { DuckDBConnection } from '@duckdb/node-api';
+import { CompletionCatalogCacheStore } from './completionCatalogCache';
 import { CompletionCatalogData, CompletionFunction, CompletionKeyword } from './types';
 
 export class CompletionCatalog {
   private keywords: CompletionKeyword[] = [];
   private functions: CompletionFunction[] = [];
 
+  constructor(private readonly cacheStore?: CompletionCatalogCacheStore) {}
+
   async load(conn: DuckDBConnection): Promise<void> {
+    const cached = this.cacheStore?.get();
+    if (cached) {
+      this.hydrate(cached);
+      void this.refreshAndSave(conn);
+      return;
+    }
+
     await this.refresh(conn);
+    await this.saveCache();
   }
 
   async refresh(conn: DuckDBConnection): Promise<void> {
@@ -46,6 +57,8 @@ export class CompletionCatalog {
       returnType: row.return_type ?? '',
       parameters: Array.isArray(row.parameters) ? row.parameters : [],
     }));
+
+    await this.saveCache();
   }
 
   getData(): CompletionCatalogData {
@@ -53,5 +66,25 @@ export class CompletionCatalog {
       keywords: this.keywords,
       functions: this.functions,
     };
+  }
+
+  private hydrate(data: CompletionCatalogData): void {
+    this.keywords = data.keywords;
+    this.functions = data.functions;
+  }
+
+  private async refreshAndSave(conn: DuckDBConnection): Promise<void> {
+    try {
+      await this.refresh(conn);
+    } catch {
+      // Keep cached catalog when background refresh fails.
+    }
+  }
+
+  private async saveCache(): Promise<void> {
+    if (!this.cacheStore) {
+      return;
+    }
+    await this.cacheStore.save(this.getData());
   }
 }

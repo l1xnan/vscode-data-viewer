@@ -4,6 +4,7 @@ import { DataTarget, formatFromExtension } from '../constants';
 import { listXlsxSheets } from '../utils/xlsxSheets';
 import { getWebviewHtml } from '../viewer/webviewHtml';
 import { scanDataFiles, ScannedDataFile } from './dataFileScanner';
+import { ExplorerFileTreeCacheStore } from './explorerFileTreeCache';
 import { createSqlSnippet, listSqlSnippets, openSqlSnippet } from '../sql/sqlSnippetStore';
 
 interface ExplorerOpenMessage {
@@ -42,8 +43,10 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
   private view: vscode.WebviewView | undefined;
   private refreshTimer: ReturnType<typeof setTimeout> | undefined;
   private messageDisposable: vscode.Disposable | undefined;
+  private readonly fileTreeCache: ExplorerFileTreeCacheStore;
 
   constructor(private readonly context: vscode.ExtensionContext) {
+    this.fileTreeCache = new ExplorerFileTreeCacheStore(context.workspaceState);
     const watcher = vscode.workspace.createFileSystemWatcher(
       '**/*.{parquet,csv,tsv,json,jsonl,ndjson,xlsx}',
     );
@@ -143,11 +146,26 @@ export class DataFileExplorerViewProvider implements vscode.WebviewViewProvider 
     if (!this.view) {
       return;
     }
+
+    const cached = this.fileTreeCache.get();
+    if (cached) {
+      await this.view.webview.postMessage({
+        type: 'files',
+        payload: {
+          tree: cached.tree,
+          sqlFiles: cached.sqlFiles,
+          workspaceOpen: cached.workspaceOpen,
+        },
+      });
+    }
+
     const { tree, workspaceOpen } = await scanDataFiles();
     const sqlFiles = await listSqlSnippets();
+    const payload = { tree, sqlFiles, workspaceOpen };
+    await this.fileTreeCache.save(payload);
     await this.view.webview.postMessage({
       type: 'files',
-      payload: { tree, sqlFiles, workspaceOpen },
+      payload,
     });
   }
 

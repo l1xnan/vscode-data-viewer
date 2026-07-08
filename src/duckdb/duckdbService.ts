@@ -1,4 +1,5 @@
 import { DuckDBConnection, DuckDBInstance } from '@duckdb/node-api';
+import * as vscode from 'vscode';
 import { DataFileFormat, DataTarget } from '../constants';
 import { toDuckDbPath } from '../utils/paths';
 import {
@@ -14,6 +15,7 @@ import {
   QueryResult,
 } from './types';
 import { CompletionCatalog } from './completionCatalog';
+import { CompletionCatalogCacheStore } from './completionCatalogCache';
 
 export class DuckDBService {
   private static instance: DuckDBService | undefined;
@@ -21,10 +23,17 @@ export class DuckDBService {
   private connection: DuckDBConnection | undefined;
   private excelLoaded = false;
   private catalog: CompletionCatalog | undefined;
+  private readonly catalogCacheStore: CompletionCatalogCacheStore | undefined;
 
-  static getInstance(): DuckDBService {
+  private constructor(globalState?: vscode.Memento) {
+    if (globalState) {
+      this.catalogCacheStore = new CompletionCatalogCacheStore(globalState);
+    }
+  }
+
+  static getInstance(globalState?: vscode.Memento): DuckDBService {
     if (!DuckDBService.instance) {
-      DuckDBService.instance = new DuckDBService();
+      DuckDBService.instance = new DuckDBService(globalState);
     }
     return DuckDBService.instance;
   }
@@ -35,7 +44,7 @@ export class DuckDBService {
     }
     this.dbInstance = await DuckDBInstance.create(':memory:');
     this.connection = await this.dbInstance.connect();
-    this.catalog = new CompletionCatalog();
+    this.catalog = new CompletionCatalog(this.catalogCacheStore);
     await this.catalog.load(this.connection);
   }
 

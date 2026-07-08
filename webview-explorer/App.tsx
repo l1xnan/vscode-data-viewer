@@ -1,11 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { countTreeFiles, FileTree, filterTree, getFoldersToExpandForSearch, TreeFileRow } from './FileTree';
+import { readFileTreeCache, writeFileTreeCache } from './fileTreeCache';
 import { newSql, notifyReady, openSql, requestSheets } from './messaging';
 import { DataFileTreeNode, ExtensionMessage, ScannedSqlFile, vscode } from './types';
 
 const DEFAULT_SPLIT_RATIO = 0.65;
 const MIN_SPLIT_RATIO = 0.2;
 const MAX_SPLIT_RATIO = 0.8;
+
+function expandRootFolders(
+  tree: DataFileTreeNode[],
+  setExpanded: Dispatch<SetStateAction<Record<string, boolean>>>,
+): void {
+  const roots = tree.filter((node) => node.kind === 'folder');
+  if (roots.length === 0) {
+    return;
+  }
+  setExpanded((prev) => {
+    const next = { ...prev };
+    for (const root of roots) {
+      next[root.path] = true;
+    }
+    return next;
+  });
+}
 
 function clampSplitRatio(value: number): number {
   return Math.min(MAX_SPLIT_RATIO, Math.max(MIN_SPLIT_RATIO, value));
@@ -24,10 +42,12 @@ function matchesSearch(text: string, search: string): boolean {
 }
 
 export function App() {
-  const [tree, setTree] = useState<DataFileTreeNode[]>([]);
-  const [sqlFiles, setSqlFiles] = useState<ScannedSqlFile[]>([]);
-  const [workspaceOpen, setWorkspaceOpen] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+  const initialCache = readFileTreeCache();
+  const [tree, setTree] = useState<DataFileTreeNode[]>(initialCache?.tree ?? []);
+  const [sqlFiles, setSqlFiles] = useState<ScannedSqlFile[]>(initialCache?.sqlFiles ?? []);
+  const [workspaceOpen, setWorkspaceOpen] = useState(initialCache?.workspaceOpen ?? true);
+  const [loaded, setLoaded] = useState(Boolean(initialCache));
+  const [isRefreshing, setIsRefreshing] = useState(Boolean(initialCache));
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sheetsByFile, setSheetsByFile] = useState<Record<string, string[]>>({});
@@ -43,23 +63,24 @@ export function App() {
   }, [splitRatio]);
 
   useEffect(() => {
+    if (initialCache) {
+      expandRootFolders(initialCache.tree, setExpanded);
+    }
+  }, []);
+
+  useEffect(() => {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
       const message = event.data;
       if (message?.type === 'files') {
-        setTree(message.payload.tree);
-        setSqlFiles(message.payload.sqlFiles);
-        setWorkspaceOpen(message.payload.workspaceOpen);
+        const { tree: nextTree, sqlFiles: nextSqlFiles, workspaceOpen: nextWorkspaceOpen } =
+          message.payload;
+        setTree(nextTree);
+        setSqlFiles(nextSqlFiles);
+        setWorkspaceOpen(nextWorkspaceOpen);
         setLoaded(true);
-        const roots = message.payload.tree.filter((node) => node.kind === 'folder');
-        if (roots.length > 0) {
-          setExpanded((prev) => {
-            const next = { ...prev };
-            for (const root of roots) {
-              next[root.path] = true;
-            }
-            return next;
-          });
-        }
+        setIsRefreshing(false);
+        writeFileTreeCache(message.payload);
+        expandRootFolders(nextTree, setExpanded);
       }
       if (message?.type === 'sheets') {
         setSheetsByFile((prev) => ({
@@ -195,7 +216,10 @@ export function App() {
       <div className="panels" ref={panelsRef}>
         <section className="panel panel-data" style={{ flex: `${splitRatio} 1 0%` }}>
           <div className="section-header section-header-first">
-            <span>Data Files</span>
+            <span>
+              Data Files
+              {isRefreshing ? <span className="section-header-status">Updating…</span> : null}
+            </span>
           </div>
           <div className="panel-body">
             {showDataEmpty ? (
