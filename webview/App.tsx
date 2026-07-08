@@ -1,6 +1,7 @@
 import { SortingState } from '@tanstack/react-table';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DataTable } from './components/DataTable';
+import { RowDetailModal } from './components/RowDetailModal';
 import { SqlEditor, SqlEditorHandle } from './components/SqlEditor';
 import { TableToolbar } from './components/TableToolbar';
 import { DEFAULT_PAGE_SIZE } from './constants';
@@ -37,6 +38,7 @@ export function App() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editorHeight, setEditorHeight] = useState(DEFAULT_EDITOR_HEIGHT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const filterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sqlSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const executedSqlRef = useRef(sql);
@@ -202,6 +204,12 @@ export function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedRowIndex !== null && selectedRowIndex >= result.rows.length) {
+      setSelectedRowIndex(null);
+    }
+  }, [result.rows, selectedRowIndex]);
+
   const handlePageChange = (page: number) => {
     sendQuery(executedSqlRef.current, page, result.pageSize, sorting, filters);
   };
@@ -278,8 +286,22 @@ export function App() {
           filters={filters}
           onSortChange={handleSortChange}
           onFilterChange={handleFilterChange}
+          onRowDoubleClick={(_row, index) => setSelectedRowIndex(index)}
         />
       </div>
+      {selectedRowIndex !== null && result.rows[selectedRowIndex] ? (
+        <RowDetailModal
+          row={result.rows[selectedRowIndex]}
+          rowIndex={selectedRowIndex}
+          page={result.page}
+          pageSize={result.pageSize}
+          totalCount={result.totalCount}
+          pageRowCount={result.rows.length}
+          onPrevious={() => setSelectedRowIndex((index) => (index !== null ? index - 1 : null))}
+          onNext={() => setSelectedRowIndex((index) => (index !== null ? index + 1 : null))}
+          onClose={() => setSelectedRowIndex(null)}
+        />
+      ) : null}
     </div>
   );
 }

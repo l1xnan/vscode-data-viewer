@@ -55,6 +55,31 @@ export function buildVsCodeSqlHighlighting(): Extension {
   return syntaxHighlighting(buildVsCodeSqlHighlightStyle());
 }
 
+function buildVsCodeJsonHighlightStyle(): HighlightStyle {
+  const palette = getSqlSyntaxPalette();
+  const foreground = readEditorForeground();
+
+  return HighlightStyle.define([
+    { tag: t.propertyName, color: palette.type },
+    { tag: t.string, color: palette.string },
+    { tag: t.special(t.string), color: palette.string },
+    { tag: t.number, color: palette.number },
+    { tag: t.bool, color: palette.keyword },
+    { tag: t.null, color: palette.keyword },
+    { tag: t.punctuation, color: foreground },
+    { tag: t.separator, color: foreground },
+  ]);
+}
+
+export const jsonSyntaxHighlightingBase: Extension[] = [
+  syntaxHighlighting(classHighlighter),
+  syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+];
+
+export function buildVsCodeJsonHighlighting(): Extension {
+  return syntaxHighlighting(buildVsCodeJsonHighlightStyle());
+}
+
 export function buildSqlEditorViewTheme(): Extension {
   return EditorView.theme({
     '&': {

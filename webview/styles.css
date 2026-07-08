@@ -434,3 +434,116 @@ tbody tr:nth-child(even) {
   text-align: center;
   color: var(--vscode-descriptionForeground);
 }
+
+tbody tr.row-clickable {
+  cursor: pointer;
+}
+
+tbody tr.row-clickable:hover td {
+  background: var(--vscode-list-hoverBackground);
+}
+
+tbody tr.row-clickable:hover td.is-pinned {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--vscode-widget-shadow, #000) 40%, transparent);
+}
+
+.row-detail-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: min(80vh, 640px);
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editor-background);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--vscode-widget-shadow, #000) 32%, transparent);
+}
+
+.row-detail-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editorWidget-background);
+}
+
+.row-detail-modal-title {
+  font-weight: 600;
+  min-width: 120px;
+  text-align: center;
+}
+
+.row-detail-modal-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-detail-nav-button {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-panel-border);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.row-detail-nav-button:hover:not(:disabled) {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.row-detail-nav-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.row-detail-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-detail-modal-actions button {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-panel-border);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.row-detail-modal-actions button:hover,
+.row-detail-modal-actions button.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.row-detail-modal-body {
+  flex: 1;
+  min-height: 240px;
+  overflow: auto;
+}
+
+.row-detail-modal-body .cm-editor {
+  height: 100%;
+  min-height: 240px;
+}
+
+.row-detail-modal-body .cm-scroller {
+  overflow: auto;
+}

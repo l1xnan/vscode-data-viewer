@@ -24,6 +24,7 @@ interface DataTableProps {
   filters: Record<string, string>;
   onSortChange: (sorting: SortingState) => void;
   onFilterChange: (column: string, value: string) => void;
+  onRowDoubleClick?: (row: Record<string, unknown>, index: number) => void;
 }
 
 interface PinMenuState {
@@ -148,6 +149,7 @@ export function DataTable({
   filters,
   onSortChange,
   onFilterChange,
+  onRowDoubleClick,
 }: DataTableProps) {
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [columnPinning, setColumnPinning] = useState<ColumnPinningState>({ left: [], right: [] });
@@ -303,14 +305,18 @@ export function DataTable({
               </td>
             </tr>
           ) : (
-            table.getRowModel().rows.map((row) => {
+            table.getRowModel().rows.map((row, rowIndex) => {
               const cells = [
                 ...row.getLeftVisibleCells(),
                 ...row.getCenterVisibleCells(),
                 ...row.getRightVisibleCells(),
               ];
               return (
-                <tr key={row.id}>
+                <tr
+                  key={row.id}
+                  className={onRowDoubleClick ? 'row-clickable' : undefined}
+                  onDoubleClick={() => onRowDoubleClick?.(row.original, rowIndex)}
+                >
                   {cells.map((cell) =>
                     renderBodyCell(
                       cell,

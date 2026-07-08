@@ -2,7 +2,7 @@
   "name": "vscode-data-viewer",
   "displayName": "Data Viewer",
   "description": "Browse and query parquet, csv, json, xlsx files with DuckDB SQL",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "l1xnan",
   "license": "MIT",
   "repository": {
@@ -167,6 +167,7 @@
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
+    "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-sql": "^6.10.0",
     "@codemirror/language": "^6.12.4",
     "@codemirror/search": "^6.7.1",
