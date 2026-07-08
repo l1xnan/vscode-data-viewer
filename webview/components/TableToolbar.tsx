@@ -61,7 +61,7 @@ export function TableToolbar({
       </button>
 
       <div className="stats">
-        Rows {start}–{end} of {totalCount}
+        Rows {start}-{end} of {totalCount}
       </div>
     </div>
   );

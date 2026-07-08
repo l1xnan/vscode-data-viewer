@@ -1,6 +1,7 @@
 import { json } from '@codemirror/lang-json';
+import { codeFolding, foldGutter, foldKeymap } from '@codemirror/language';
 import { Compartment, EditorState } from '@codemirror/state';
-import { EditorView, lineNumbers } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   buildSqlEditorViewTheme,
@@ -8,6 +9,21 @@ import {
   jsonSyntaxHighlightingBase,
   subscribeToVsCodeThemeChanges,
 } from '../codemirrorTheme';
+
+const jsonFoldTheme = EditorView.theme({
+  '.cm-foldGutter .cm-gutterElement': {
+    cursor: 'pointer',
+    color: 'var(--vscode-editorLineNumber-foreground, #858585)',
+  },
+  '.cm-foldGutter .cm-gutterElement:hover': {
+    color: 'var(--vscode-foreground, #cccccc)',
+  },
+  '.cm-foldPlaceholder': {
+    backgroundColor: 'var(--vscode-editor-background, #1e1e1e)',
+    border: 'none',
+    color: 'var(--vscode-descriptionForeground, #858585)',
+  },
+});
 
 interface RowDetailModalProps {
   row: Record<string, unknown>;
@@ -73,10 +89,14 @@ export function RowDetailModal({
       doc: stringifyRowData(row, true),
       extensions: [
         lineNumbers(),
+        foldGutter(),
+        codeFolding(),
+        keymap.of(foldKeymap),
         json(),
         ...jsonSyntaxHighlightingBase,
         highlightCompartment.current.of(buildVsCodeJsonHighlighting()),
         themeCompartment.current.of(buildSqlEditorViewTheme()),
+        jsonFoldTheme,
         EditorState.readOnly.of(true),
         EditorView.editable.of(false),
       ],
