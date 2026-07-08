@@ -2,7 +2,7 @@ import { Codicon, getDataFileIcon } from './codicons';
 import { openFile } from './messaging';
 import { DataFileTreeNode } from './types';
 
-const TREE_INDENT = 8;
+const TREE_INDENT = 12;
 
 interface FileTreeProps {
   nodes: DataFileTreeNode[];
@@ -12,7 +12,6 @@ interface FileTreeProps {
   loadingSheets: Record<string, boolean>;
   onToggleFolder: (path: string) => void;
   onToggleWorkbook: (node: DataFileTreeNode) => void;
-  forceExpand?: boolean;
 }
 
 function matchesSearch(node: DataFileTreeNode, search: string): boolean {
@@ -46,6 +45,35 @@ export function filterTree(nodes: DataFileTreeNode[], search: string): DataFileT
   return nodes.map(filterNode).filter((node): node is DataFileTreeNode => node !== null);
 }
 
+export function getFoldersToExpandForSearch(
+  nodes: DataFileTreeNode[],
+  search: string,
+): string[] {
+  if (!search.trim()) {
+    return [];
+  }
+
+  const paths: string[] = [];
+
+  const visit = (node: DataFileTreeNode): boolean => {
+    if (node.kind === 'folder') {
+      const childHasMatch = (node.children ?? []).some(visit);
+      if (childHasMatch) {
+        paths.push(node.path);
+        return true;
+      }
+      return matchesSearch(node, search);
+    }
+    return matchesSearch(node, search);
+  };
+
+  for (const node of nodes) {
+    visit(node);
+  }
+
+  return paths;
+}
+
 function countDataFiles(nodes: DataFileTreeNode[]): number {
   let count = 0;
   for (const node of nodes) {
@@ -71,7 +99,6 @@ export function FileTree({
   loadingSheets,
   onToggleFolder,
   onToggleWorkbook,
-  forceExpand = false,
 }: FileTreeProps) {
   return (
     <div className="tree-root" role="tree">
@@ -85,7 +112,6 @@ export function FileTree({
           loadingSheets={loadingSheets}
           onToggleFolder={onToggleFolder}
           onToggleWorkbook={onToggleWorkbook}
-          forceExpand={forceExpand}
         />
       ))}
     </div>
@@ -100,7 +126,6 @@ interface TreeNodeProps {
   loadingSheets: Record<string, boolean>;
   onToggleFolder: (path: string) => void;
   onToggleWorkbook: (node: DataFileTreeNode) => void;
-  forceExpand: boolean;
 }
 
 type TwistieState = 'collapsed' | 'expanded' | 'hidden';
@@ -188,10 +213,9 @@ function TreeNode({
   loadingSheets,
   onToggleFolder,
   onToggleWorkbook,
-  forceExpand,
 }: TreeNodeProps) {
   if (node.kind === 'folder') {
-    const isExpanded = forceExpand || expanded[node.path];
+    const isExpanded = expanded[node.path];
     const hasChildren = (node.children?.length ?? 0) > 0;
 
     return (
@@ -214,7 +238,6 @@ function TreeNode({
             loadingSheets={loadingSheets}
             onToggleFolder={onToggleFolder}
             onToggleWorkbook={onToggleWorkbook}
-            forceExpand={forceExpand}
           />
         ) : null}
       </div>

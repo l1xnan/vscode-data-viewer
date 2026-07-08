@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { countTreeFiles, FileTree, filterTree, TreeFileRow } from './FileTree';
+import { countTreeFiles, FileTree, filterTree, getFoldersToExpandForSearch, TreeFileRow } from './FileTree';
 import { newSql, notifyReady, openSql, requestSheets } from './messaging';
 import { DataFileTreeNode, ExtensionMessage, ScannedSqlFile, vscode } from './types';
 
@@ -123,6 +123,23 @@ export function App() {
     };
   }, [isDraggingSplit, updateSplitFromPointer]);
 
+  useEffect(() => {
+    if (!search.trim()) {
+      return;
+    }
+    const pathsToExpand = getFoldersToExpandForSearch(tree, search);
+    if (pathsToExpand.length === 0) {
+      return;
+    }
+    setExpanded((prev) => {
+      const next = { ...prev };
+      for (const path of pathsToExpand) {
+        next[path] = true;
+      }
+      return next;
+    });
+  }, [search, tree]);
+
   const fileCount = useMemo(() => countTreeFiles(tree), [tree]);
   const visibleTree = useMemo(
     () => (search.trim() ? filterTree(tree, search) : tree),
@@ -191,7 +208,6 @@ export function App() {
                 loadingSheets={loadingSheets}
                 onToggleFolder={toggleFolder}
                 onToggleWorkbook={toggleWorkbook}
-                forceExpand={Boolean(search.trim())}
               />
             )}
           </div>
