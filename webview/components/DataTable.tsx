@@ -22,6 +22,7 @@ interface DataTableProps {
   rows: Record<string, unknown>[];
   sorting: SortingState;
   filters: Record<string, string>;
+  loading?: boolean;
   onSortChange: (sorting: SortingState) => void;
   onFilterChange: (column: string, value: string) => void;
   onRowDoubleClick?: (row: Record<string, unknown>, index: number) => void;
@@ -31,6 +32,15 @@ interface PinMenuState {
   columnId: string;
   x: number;
   y: number;
+}
+
+function TableLoadingOverlay() {
+  return (
+    <div className="table-loading-overlay" role="status" aria-live="polite">
+      <span className="table-loading-spinner" aria-hidden />
+      Loading...
+    </div>
+  );
 }
 
 function formatCellValue(value: unknown): string {
@@ -147,6 +157,7 @@ export function DataTable({
   rows,
   sorting,
   filters,
+  loading = false,
   onSortChange,
   onFilterChange,
   onRowDoubleClick,
@@ -230,6 +241,13 @@ export function DataTable({
   }, [pinMenu]);
 
   if (columns.length === 0) {
+    if (loading) {
+      return (
+        <div className="table-container table-loading-only">
+          <TableLoadingOverlay />
+        </div>
+      );
+    }
     return <div className="empty-state">No columns to display</div>;
   }
 
@@ -257,7 +275,8 @@ export function DataTable({
   const pinMenuPinned = pinMenuColumn?.getIsPinned();
 
   return (
-    <div className={`table-container${isResizing ? ' table-col-resizing' : ''}`}>
+    <div className={`table-container${isResizing ? ' table-col-resizing' : ''}${loading ? ' is-loading' : ''}`}>
+      {loading ? <TableLoadingOverlay /> : null}
       <table>
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (

@@ -38,6 +38,7 @@ export function App() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editorHeight, setEditorHeight] = useState(DEFAULT_EDITOR_HEIGHT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [isQueryLoading, setIsQueryLoading] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const filterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sqlSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -106,6 +107,7 @@ export function App() {
         sort,
         filters: nextFilters,
       });
+      setIsQueryLoading(true);
     },
     [],
   );
@@ -119,6 +121,7 @@ export function App() {
         setCatalog(message.payload.catalog);
         setCompletionColumns(message.payload.columns);
         setResult((prev) => ({ ...prev, pageSize: message.payload.pageSize }));
+        setIsQueryLoading(true);
         setInitialized(true);
       }
       if (message?.type === 'setSql') {
@@ -126,6 +129,7 @@ export function App() {
       }
       if (message?.type === 'queryResult') {
         setResult(message.payload);
+        setIsQueryLoading(false);
         if (message.payload.columns.length > 0) {
           setCompletionColumns(message.payload.columns);
         }
@@ -284,6 +288,7 @@ export function App() {
           rows={result.rows}
           sorting={sorting}
           filters={filters}
+          loading={isQueryLoading}
           onSortChange={handleSortChange}
           onFilterChange={handleFilterChange}
           onRowDoubleClick={(_row, index) => setSelectedRowIndex(index)}
