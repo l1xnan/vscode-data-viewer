@@ -298,6 +298,15 @@ body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-functi
   pointer-events: none;
 }
 
+.table-container.table-cell-selecting {
+  user-select: none;
+  cursor: cell;
+}
+
+.table-container.table-cell-selecting table {
+  user-select: none;
+}
+
 .table-loading-only {
   min-height: 120px;
 }
@@ -387,6 +396,11 @@ tbody tr:nth-child(even) td.row-number-cell {
 
 tbody tr.row-clickable:hover td.row-number-cell {
   background: var(--vscode-list-hoverBackground);
+}
+
+thead th.cell-selected {
+  background: var(--vscode-editor-selectionBackground) !important;
+  color: var(--vscode-editor-selectionForeground, var(--vscode-foreground));
 }
 
 thead th {
@@ -498,6 +512,12 @@ tbody tr:nth-child(even) td.is-pinned {
   color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
 }
 
+.table-context-menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
+}
+
 thead th .sort-indicator {
   margin-left: 4px;
   opacity: 0.7;
@@ -509,6 +529,23 @@ tbody td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+tbody td.cell-selected {
+  background: var(--vscode-editor-selectionBackground) !important;
+  color: var(--vscode-editor-selectionForeground, var(--vscode-foreground));
+}
+
+tbody tr:nth-child(even) td.cell-selected {
+  background: var(--vscode-editor-selectionBackground) !important;
+}
+
+tbody tr.row-clickable:hover td.cell-selected {
+  background: color-mix(
+    in srgb,
+    var(--vscode-editor-selectionBackground) 88%,
+    var(--vscode-list-hoverBackground) 12%
+  ) !important;
 }
 
 tbody tr:nth-child(even) {
