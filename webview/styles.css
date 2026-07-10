@@ -330,11 +330,63 @@ body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-functi
   }
 }
 
-table {
+table.data-table {
   width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
+}
+
+col.row-number-col {
+  width: 56px !important;
+}
+
+.row-number-header,
+tbody td.row-number-cell {
+  position: sticky;
+  left: 0;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  padding-left: 0;
+  padding-right: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.row-number-header {
+  top: 0;
+  z-index: 5;
+  background: var(--vscode-editorWidget-background);
+}
+
+tbody td.row-number-cell {
+  z-index: 2;
+  background: var(--vscode-editor-background);
+}
+
+.row-number-header .th-content,
+tbody td.row-number-cell {
+  justify-content: center;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  cursor: default;
+}
+
+.row-number-header .th-content {
+  padding: 6px 4px;
+}
+
+tbody td.row-number-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr:nth-child(even) td.row-number-cell {
+  background: color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-foreground) 8%);
+}
+
+tbody tr.row-clickable:hover td.row-number-cell {
+  background: var(--vscode-list-hoverBackground);
 }
 
 thead th {
@@ -357,10 +409,25 @@ thead th .th-content {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px 6px 8px;
+  padding: 6px 10px 4px 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+}
+
+thead th .th-filter {
+  padding: 0 6px 6px;
+}
+
+thead th .th-filter input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--vscode-input-border);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+  box-sizing: border-box;
 }
 
 thead th .col-resizer {
@@ -381,7 +448,8 @@ thead th .col-resizer.is-resizing {
 }
 
 thead th.is-pinned {
-  z-index: 3;
+  z-index: 4;
+  background: var(--vscode-editorWidget-background);
 }
 
 thead th .pin-indicator {
@@ -392,10 +460,6 @@ thead th .pin-indicator {
   border-bottom: 6px solid var(--vscode-descriptionForeground);
   opacity: 0.75;
   flex-shrink: 0;
-}
-
-.filter-row th.is-pinned {
-  z-index: 2;
 }
 
 tbody td.is-pinned {
@@ -437,21 +501,6 @@ tbody tr:nth-child(even) td.is-pinned {
 thead th .sort-indicator {
   margin-left: 4px;
   opacity: 0.7;
-}
-
-.filter-row th {
-  padding: 4px 6px;
-}
-
-.filter-row input {
-  width: 100%;
-  min-width: 0;
-  padding: 4px 6px;
-  border: 1px solid var(--vscode-input-border);
-  background: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  font: inherit;
-  box-sizing: border-box;
 }
 
 tbody td {

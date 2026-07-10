@@ -16,10 +16,14 @@ import { QueryColumn } from '../types';
 const DEFAULT_COLUMN_WIDTH = 120;
 const MIN_COLUMN_WIDTH = 48;
 const MAX_COLUMN_WIDTH = 600;
+const ROW_NUMBER_COLUMN_ID = '_rowNumber';
+const ROW_NUMBER_COLUMN_WIDTH = 56;
 
 interface DataTableProps {
   columns: QueryColumn[];
   rows: Record<string, unknown>[];
+  page: number;
+  pageSize: number;
   sorting: SortingState;
   filters: Record<string, string>;
   loading?: boolean;
@@ -61,6 +65,33 @@ function columnWidthStyle(size: number): CSSProperties {
   };
 }
 
+function getColumnWidth(column: Column<Record<string, unknown>, unknown>): number {
+  if (column.id === ROW_NUMBER_COLUMN_ID) {
+    return ROW_NUMBER_COLUMN_WIDTH;
+  }
+  return column.getSize();
+}
+
+function stripRowNumberSizing(sizing: ColumnSizingState): ColumnSizingState {
+  if (!(ROW_NUMBER_COLUMN_ID in sizing)) {
+    return sizing;
+  }
+  const { [ROW_NUMBER_COLUMN_ID]: _removed, ...rest } = sizing;
+  return rest;
+}
+
+function getRowNumberCellStyle(isHeader: boolean): CSSProperties {
+  return {
+    position: 'sticky',
+    left: 0,
+    top: isHeader ? 0 : undefined,
+    ...columnWidthStyle(ROW_NUMBER_COLUMN_WIDTH),
+    zIndex: isHeader ? 5 : 2,
+    boxShadow:
+      '2px 0 4px -2px color-mix(in srgb, var(--vscode-foreground) 18%, transparent)',
+  };
+}
+
 function getPinningStyle(
   column: Column<Record<string, unknown>, unknown>,
   options: { isHeader?: boolean; isLastLeft?: boolean; isFirstRight?: boolean } = {},
@@ -92,42 +123,83 @@ function getPinningClassName(column: Column<Record<string, unknown>, unknown>): 
   return `is-pinned is-pinned-${pinned}`;
 }
 
+function withRowNumberPinning(pinning: ColumnPinningState): ColumnPinningState {
+  const left = (pinning.left ?? []).filter((id) => id !== ROW_NUMBER_COLUMN_ID);
+  return {
+    left: [ROW_NUMBER_COLUMN_ID, ...left],
+    right: pinning.right ?? [],
+  };
+}
+
 function renderHeaderCell(
   header: Header<Record<string, unknown>, unknown>,
   columns: QueryColumn[],
+  filters: Record<string, string>,
   isLastLeft: boolean,
   isFirstRight: boolean,
   onContextMenu: (event: MouseEvent<HTMLTableCellElement>, columnId: string) => void,
+  onFilterChange: (column: string, value: string) => void,
 ) {
+  const columnId = header.column.id;
+  const isRowNumberColumn = columnId === ROW_NUMBER_COLUMN_ID;
   const sorted = header.column.getIsSorted();
-  const width = header.getSize();
+  const width = isRowNumberColumn ? ROW_NUMBER_COLUMN_WIDTH : header.getSize();
   const pinned = header.column.getIsPinned();
 
   return (
     <th
       key={header.id}
-      className={`sortable${getPinningClassName(header.column) ? ` ${getPinningClassName(header.column)}` : ''}`}
+      className={[
+        isRowNumberColumn ? 'row-number-header' : 'sortable',
+        getPinningClassName(header.column),
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{
-        ...columnWidthStyle(width),
-        ...getPinningStyle(header.column, { isHeader: true, isLastLeft, isFirstRight }),
+        ...(isRowNumberColumn
+          ? getRowNumberCellStyle(true)
+          : {
+              ...columnWidthStyle(width),
+              ...getPinningStyle(header.column, { isHeader: true, isLastLeft, isFirstRight }),
+            }),
       }}
-      title={columns.find((c) => c.name === header.column.id)?.type}
-      onContextMenu={(event) => onContextMenu(event, header.column.id)}
+      title={isRowNumberColumn ? 'Row number' : columns.find((c) => c.name === columnId)?.type}
+      onContextMenu={isRowNumberColumn ? undefined : (event) => onContextMenu(event, columnId)}
     >
-      <div className="th-content" onClick={header.column.getToggleSortingHandler()}>
-        {pinned ? <span className="pin-indicator" title="Pinned column" aria-hidden /> : null}
-        {flexRender(header.column.columnDef.header, header.getContext())}
-        <span className="sort-indicator">
-          {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : ''}
-        </span>
-      </div>
       <div
-        className={`col-resizer${header.column.getIsResizing() ? ' is-resizing' : ''}`}
-        onMouseDown={header.getResizeHandler()}
-        onTouchStart={header.getResizeHandler()}
-        onClick={(event) => event.stopPropagation()}
-        aria-hidden
-      />
+        className="th-content"
+        onClick={isRowNumberColumn ? undefined : header.column.getToggleSortingHandler()}
+      >
+        {!isRowNumberColumn && pinned ? (
+          <span className="pin-indicator" title="Pinned column" aria-hidden />
+        ) : null}
+        {flexRender(header.column.columnDef.header, header.getContext())}
+        {!isRowNumberColumn ? (
+          <span className="sort-indicator">
+            {sorted === 'asc' ? '▲' : sorted === 'desc' ? '▼' : ''}
+          </span>
+        ) : null}
+      </div>
+      {!isRowNumberColumn ? (
+        <div className="th-filter">
+          <input
+            type="text"
+            placeholder={columnId}
+            value={filters[columnId] ?? ''}
+            onChange={(event) => onFilterChange(columnId, event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
+      {!isRowNumberColumn ? (
+        <div
+          className={`col-resizer${header.column.getIsResizing() ? ' is-resizing' : ''}`}
+          onMouseDown={header.getResizeHandler()}
+          onTouchStart={header.getResizeHandler()}
+          onClick={(event) => event.stopPropagation()}
+          aria-hidden
+        />
+      ) : null}
     </th>
   );
 }
@@ -137,15 +209,23 @@ function renderBodyCell(
   isLastLeft: boolean,
   isFirstRight: boolean,
 ) {
+  const isRowNumberColumn = cell.column.id === ROW_NUMBER_COLUMN_ID;
+
   return (
     <td
       key={cell.id}
-      className={getPinningClassName(cell.column)}
-      style={{
-        ...columnWidthStyle(cell.column.getSize()),
-        ...getPinningStyle(cell.column, { isLastLeft, isFirstRight }),
-      }}
-      title={formatCellValue(cell.getValue())}
+      className={[getPinningClassName(cell.column), isRowNumberColumn ? 'row-number-cell' : '']
+        .filter(Boolean)
+        .join(' ')}
+      style={
+        isRowNumberColumn
+          ? getRowNumberCellStyle(false)
+          : {
+              ...columnWidthStyle(getColumnWidth(cell.column)),
+              ...getPinningStyle(cell.column, { isLastLeft, isFirstRight }),
+            }
+      }
+      title={isRowNumberColumn ? undefined : formatCellValue(cell.getValue())}
     >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </td>
@@ -155,6 +235,8 @@ function renderBodyCell(
 export function DataTable({
   columns,
   rows,
+  page,
+  pageSize,
   sorting,
   filters,
   loading = false,
@@ -163,17 +245,33 @@ export function DataTable({
   onRowDoubleClick,
 }: DataTableProps) {
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
-  const [columnPinning, setColumnPinning] = useState<ColumnPinningState>({ left: [], right: [] });
+  const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(() =>
+    withRowNumberPinning({ left: [], right: [] }),
+  );
   const [pinMenu, setPinMenu] = useState<PinMenuState | null>(null);
 
+  const rowNumberStart = (page - 1) * pageSize;
+
   const columnDefs = useMemo<ColumnDef<Record<string, unknown>>[]>(
-    () =>
-      columns.map((column) => ({
+    () => [
+      {
+        id: ROW_NUMBER_COLUMN_ID,
+        header: '#',
+        size: ROW_NUMBER_COLUMN_WIDTH,
+        minSize: ROW_NUMBER_COLUMN_WIDTH,
+        maxSize: ROW_NUMBER_COLUMN_WIDTH,
+        enableSorting: false,
+        enablePinning: true,
+        enableResizing: false,
+        cell: ({ row }) => String(rowNumberStart + row.index + 1),
+      },
+      ...columns.map((column) => ({
         accessorKey: column.name,
         header: column.name,
-        cell: ({ getValue }) => formatCellValue(getValue()),
+        cell: ({ getValue }: { getValue: () => unknown }) => formatCellValue(getValue()),
       })),
-    [columns],
+    ],
+    [columns, rowNumberStart],
   );
 
   const table = useReactTable({
@@ -194,28 +292,37 @@ export function DataTable({
       const next = typeof updater === 'function' ? updater(sorting) : updater;
       onSortChange(next);
     },
-    onColumnSizingChange: setColumnSizing,
-    onColumnPinningChange: setColumnPinning,
+    onColumnSizingChange: (updater) => {
+      setColumnSizing((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        return stripRowNumberSizing(next);
+      });
+    },
+    onColumnPinningChange: (updater) => {
+      setColumnPinning((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        return withRowNumberPinning(next);
+      });
+    },
   });
 
   const isResizing = Boolean(table.getState().columnSizingInfo.isResizingColumn);
 
   const leftColumns = table.getLeftLeafColumns();
+  const centerColumns = table.getCenterLeafColumns();
   const rightColumns = table.getRightLeafColumns();
-  const orderedColumns = [
-    ...leftColumns,
-    ...table.getCenterLeafColumns(),
-    ...rightColumns,
-  ];
+  const leafColumns = [...leftColumns, ...centerColumns, ...rightColumns];
   const lastLeftColumnId = leftColumns[leftColumns.length - 1]?.id;
   const firstRightColumnId = rightColumns[0]?.id;
 
   useEffect(() => {
     const columnIds = new Set(columns.map((column) => column.name));
-    setColumnPinning((prev) => ({
-      left: (prev.left ?? []).filter((id) => columnIds.has(id)),
-      right: (prev.right ?? []).filter((id) => columnIds.has(id)),
-    }));
+    setColumnPinning((prev) =>
+      withRowNumberPinning({
+        left: (prev.left ?? []).filter((id) => id === ROW_NUMBER_COLUMN_ID || columnIds.has(id)),
+        right: (prev.right ?? []).filter((id) => columnIds.has(id)),
+      }),
+    );
   }, [columns]);
 
   useEffect(() => {
@@ -255,6 +362,9 @@ export function DataTable({
     event: MouseEvent<HTMLTableCellElement>,
     columnId: string,
   ) => {
+    if (columnId === ROW_NUMBER_COLUMN_ID) {
+      return;
+    }
     const column = table.getColumn(columnId);
     if (!column?.getCanPin()) {
       return;
@@ -264,7 +374,8 @@ export function DataTable({
   };
 
   const pinColumn = (position: 'left' | 'right' | false) => {
-    if (!pinMenu) {
+    if (!pinMenu || pinMenu.columnId === ROW_NUMBER_COLUMN_ID) {
+      setPinMenu(null);
       return;
     }
     table.getColumn(pinMenu.columnId)?.pin(position);
@@ -273,11 +384,25 @@ export function DataTable({
 
   const pinMenuColumn = pinMenu ? table.getColumn(pinMenu.columnId) : undefined;
   const pinMenuPinned = pinMenuColumn?.getIsPinned();
+  const tableWidth = leafColumns.reduce((total, column) => total + getColumnWidth(column), 0);
 
   return (
     <div className={`table-container${isResizing ? ' table-col-resizing' : ''}${loading ? ' is-loading' : ''}`}>
       {loading ? <TableLoadingOverlay /> : null}
-      <table>
+      <table className="data-table" style={{ width: tableWidth }}>
+        <colgroup>
+          {leafColumns.map((column) => (
+            <col
+              key={column.id}
+              className={column.id === ROW_NUMBER_COLUMN_ID ? 'row-number-col' : undefined}
+              style={
+                column.id === ROW_NUMBER_COLUMN_ID
+                  ? { width: ROW_NUMBER_COLUMN_WIDTH }
+                  : { width: column.getSize() }
+              }
+            />
+          ))}
+        </colgroup>
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
@@ -285,41 +410,21 @@ export function DataTable({
                 renderHeaderCell(
                   header,
                   columns,
-                  header.column.id === lastLeftColumnId,
+                  filters,
+                  header.column.id === lastLeftColumnId &&
+                    header.column.id !== ROW_NUMBER_COLUMN_ID,
                   header.column.id === firstRightColumnId,
                   handleHeaderContextMenu,
+                  onFilterChange,
                 ),
               )}
             </tr>
           ))}
-          <tr className="filter-row">
-            {orderedColumns.map((column) => (
-              <th
-                key={`filter-${column.id}`}
-                className={getPinningClassName(column)}
-                style={{
-                  ...columnWidthStyle(column.getSize()),
-                  ...getPinningStyle(column, {
-                    isHeader: true,
-                    isLastLeft: column.id === lastLeftColumnId,
-                    isFirstRight: column.id === firstRightColumnId,
-                  }),
-                }}
-              >
-                <input
-                  type="text"
-                  placeholder="Filter"
-                  value={filters[column.id] ?? ''}
-                  onChange={(event) => onFilterChange(column.id, event.target.value)}
-                />
-              </th>
-            ))}
-          </tr>
         </thead>
         <tbody>
           {table.getRowModel().rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="empty-state">
+              <td colSpan={columns.length + 1} className="empty-state">
                 No rows
               </td>
             </tr>
@@ -339,7 +444,8 @@ export function DataTable({
                   {cells.map((cell) =>
                     renderBodyCell(
                       cell,
-                      cell.column.id === lastLeftColumnId,
+                      cell.column.id === lastLeftColumnId &&
+                        cell.column.id !== ROW_NUMBER_COLUMN_ID,
                       cell.column.id === firstRightColumnId,
                     ),
                   )}

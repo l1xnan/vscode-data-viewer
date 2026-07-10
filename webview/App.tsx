@@ -286,6 +286,8 @@ export function App() {
         <DataTable
           columns={result.columns}
           rows={result.rows}
+          page={result.page}
+          pageSize={result.pageSize}
           sorting={sorting}
           filters={filters}
           loading={isQueryLoading}
