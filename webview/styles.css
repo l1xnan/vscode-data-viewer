@@ -271,6 +271,12 @@ body[data-vscode-theme-kind='vscode-high-contrast-light'] .cm-editor .tok-functi
   cursor: not-allowed;
 }
 
+.toolbar button.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-background);
+}
+
 .toolbar select {
   min-width: 72px;
 }

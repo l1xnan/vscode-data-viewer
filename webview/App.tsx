@@ -36,6 +36,7 @@ export function App() {
   const [result, setResult] = useState<QueryResultPayload>(emptyResult);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [showFilters, setShowFilters] = useState(false);
   const [editorHeight, setEditorHeight] = useState(DEFAULT_EDITOR_HEIGHT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [isQueryLoading, setIsQueryLoading] = useState(false);
@@ -279,6 +280,8 @@ export function App() {
           page={result.page}
           pageSize={result.pageSize}
           totalCount={result.totalCount}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((prev) => !prev)}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           onRefresh={handleRefresh}
@@ -290,6 +293,7 @@ export function App() {
           pageSize={result.pageSize}
           sorting={sorting}
           filters={filters}
+          showFilters={showFilters}
           loading={isQueryLoading}
           onSortChange={handleSortChange}
           onFilterChange={handleFilterChange}

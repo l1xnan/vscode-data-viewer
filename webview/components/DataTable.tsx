@@ -35,6 +35,7 @@ interface DataTableProps {
   pageSize: number;
   sorting: SortingState;
   filters: Record<string, string>;
+  showFilters?: boolean;
   loading?: boolean;
   onSortChange: (sorting: SortingState) => void;
   onFilterChange: (column: string, value: string) => void;
@@ -45,6 +46,7 @@ interface CopyMenuState {
   x: number;
   y: number;
   pinColumnId?: string;
+  sortColumnId?: string;
 }
 
 interface CellCoord {
@@ -306,8 +308,10 @@ function renderHeaderCell(
     event: MouseEvent<HTMLDivElement>,
     sortHandler: ((event: unknown) => void) | undefined,
   ) => void,
+  showFilters?: boolean,
 ) {
   const columnId = header.column.id;
+  const headerShowFilters = showFilters ?? false;
   const isRowNumberColumn = columnId === ROW_NUMBER_COLUMN_ID;
   const sorted = header.column.getIsSorted();
   const width = isRowNumberColumn ? ROW_NUMBER_COLUMN_WIDTH : header.getSize();
@@ -351,9 +355,10 @@ function renderHeaderCell(
           </span>
         ) : null}
       </div>
-      {!isRowNumberColumn ? (
+      {!isRowNumberColumn && headerShowFilters ? (
         <div className="th-filter" onMouseDown={(event) => event.stopPropagation()}>
           <input
+            key={columnId}
             type="text"
             placeholder={columnId}
             value={filters[columnId] ?? ''}
@@ -427,6 +432,7 @@ export function DataTable({
   pageSize,
   sorting,
   filters,
+  showFilters = false,
   loading = false,
   onSortChange,
   onFilterChange,
@@ -670,6 +676,7 @@ export function DataTable({
       x: event.clientX,
       y: event.clientY,
       pinColumnId: columnId !== ROW_NUMBER_COLUMN_ID ? columnId : undefined,
+      sortColumnId: columnId !== ROW_NUMBER_COLUMN_ID ? columnId : undefined,
     });
   };
 
@@ -694,7 +701,7 @@ export function DataTable({
       event.stopPropagation();
       return;
     }
-    sortHandler?.(event);
+    sortHandler?.(undefined);
   };
 
   const handleCellMouseDown = (
@@ -802,6 +809,7 @@ export function DataTable({
                   handleHeaderContextMenu,
                   onFilterChange,
                   handleHeaderClick,
+                  showFilters,
                 );
               })}
             </tr>
@@ -860,6 +868,40 @@ export function DataTable({
           <button type="button" onClick={() => void copyActiveSelectionAsCsv()}>
             Copy as CSV (with headers)
           </button>
+          {copyMenu.sortColumnId ? (
+            <>
+              <div className="table-context-menu-separator" role="separator" />
+              <button
+                type="button"
+                onClick={() => {
+                  onSortChange([{ id: copyMenu.sortColumnId!, desc: false }]);
+                  setCopyMenu(null);
+                }}
+              >
+                Sort Ascending
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSortChange([{ id: copyMenu.sortColumnId!, desc: true }]);
+                  setCopyMenu(null);
+                }}
+              >
+                Sort Descending
+              </button>
+              {sorting.some((s) => s.id === copyMenu.sortColumnId) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSortChange(sorting.filter((s) => s.id !== copyMenu.sortColumnId));
+                    setCopyMenu(null);
+                  }}
+                >
+                  Clear Sort
+                </button>
+              ) : null}
+            </>
+          ) : null}
           {copyMenu.pinColumnId && pinMenuColumn ? (
             <>
               <div className="table-context-menu-separator" role="separator" />

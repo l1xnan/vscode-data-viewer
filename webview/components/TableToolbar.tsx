@@ -4,6 +4,8 @@ interface TableToolbarProps {
   page: number;
   pageSize: number;
   totalCount: number;
+  showFilters: boolean;
+  onToggleFilters: () => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRefresh: () => void;
@@ -13,6 +15,8 @@ export function TableToolbar({
   page,
   pageSize,
   totalCount,
+  showFilters,
+  onToggleFilters,
   onPageChange,
   onPageSizeChange,
   onRefresh,
@@ -55,6 +59,15 @@ export function TableToolbar({
           ))}
         </select>
       </div>
+
+      <button
+        type="button"
+        className={showFilters ? 'active' : undefined}
+        aria-pressed={showFilters}
+        onClick={onToggleFilters}
+      >
+        Filters
+      </button>
 
       <button type="button" onClick={onRefresh}>
         Refresh
